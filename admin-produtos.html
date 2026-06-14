@@ -18,21 +18,20 @@
 <body>
     <header class="admin-header">
         <div class="header-cover" id="admin-cover-bg">
-            <a href="index.html" class="btn-secondary" style="top: 15px; left: 15px;">← Cardápio</a>
             <button onclick="logout()" class="btn-secondary" style="top: 15px; left: auto; right: 15px;">Sair</button>
         </div>
         <div class="header-info">
-            <img id="logo-admin" class="restaurant-logo" style="display: none;" alt="Logo">
+            <img id="logo-admin" class="restaurant-logo" style="display: none; background: white;" alt="Logo">
             <h1>Painel Gestor</h1>
             <p>Gerencie pedidos e produtos</p>
         </div>
     </header>
 
     <nav class="admin-nav">
-        <a onclick="showSection('dashboard')" class="nav-item active" id="nav-dashboard">Visão Geral</a>
-        <a onclick="showSection('cardapio')" class="nav-item" id="nav-cardapio">Meu Cardápio</a>
-        <a onclick="showSection('marketing')" class="nav-item" id="nav-marketing">Marketing</a>
-        <a onclick="openModal('modal-config')" class="nav-item">Configurações</a>
+        <a onclick="showSection('dashboard')" class="nav-item active" id="nav-dashboard"><i data-lucide="layout-dashboard" style="width:18px"></i> Visão Geral</a>
+        <a onclick="showSection('cardapio')" class="nav-item" id="nav-cardapio"><i data-lucide="book-open" style="width:18px"></i> Meu Cardápio</a>
+        <a onclick="showSection('marketing')" class="nav-item" id="nav-marketing"><i data-lucide="megaphone" style="width:18px"></i> Marketing</a>
+        <a onclick="openModal('modal-config')" class="nav-item"><i data-lucide="settings" style="width:18px"></i> Configurações</a>
     </nav>
 
     <div class="container">
@@ -101,7 +100,7 @@
         <div class="modal-content">
             <h2 id="modal-titulo">Novo Produto</h2>
             <form id="cadastroProdutoForm">
-            <div class="form-group">
+            <div class="form-group" style="text-align: left;">
                 <label for="nome">Nome do Produto</label>
                 <input type="text" id="nome" placeholder="Ex: Pizza Calabresa" required>
             </div>
@@ -126,6 +125,7 @@
                 <select id="categoria" required>
                     <option value="Lanches">Lanches</option>
                     <option value="Pizzas">Pizzas</option>
+                    <option value="Acompanhamentos">Acompanhamentos</option>
                     <option value="Bebidas">Bebidas</option>
                     <option value="Sobremesas">Sobremesas</option>
                     <option value="Outros">Outros</option>
@@ -162,8 +162,8 @@
                 <textarea id="descricao" rows="3" placeholder="Descreva os ingredientes..."></textarea>
             </div>
 
-            <button type="submit" id="btnSalvar">Cadastrar Produto</button>
-            <button type="button" onclick="closeModal('modal-produto')" style="background: none; color: var(--text-muted); border: none; width: 100%; cursor: pointer; margin-top: 15px;">Cancelar</button>
+            <button type="submit" id="btnSalvar" style="margin-top: 10px;">Salvar Produto</button>
+            <button type="button" onclick="closeModal('modal-produto')" style="background: none; color: var(--text-muted); border: none; width: 100%; cursor: pointer; padding: 5px;">Cancelar</button>
         </form>
         </div>
     </div>
@@ -229,6 +229,9 @@
 
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Biblioteca de Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <script src="script.js"></script>
     <script>
         // Exibir link da loja no Dashboard
@@ -242,6 +245,9 @@
             navigator.clipboard.writeText(link);
             alert('Link copiado! Envie este link para seus clientes.');
         }
+
+        // Inicializa ícones do Lucide
+        lucide.createIcons();
     </script>
 </body>
 </html>

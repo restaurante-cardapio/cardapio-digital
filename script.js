@@ -11,10 +11,12 @@ function logout() {
 
 window.openModal = function(id) {
     document.getElementById(id).style.display = 'flex';
+    document.body.classList.add('no-scroll');
 }
 
 window.closeModal = function(id) {
     document.getElementById(id).style.display = 'none';
+    document.body.classList.remove('no-scroll');
     if (id === 'modal-produto') {
         editId = null;
         formProduto.reset();
@@ -22,6 +24,13 @@ window.closeModal = function(id) {
         document.getElementById('btnSalvar').innerText = 'Cadastrar Produto';
     }
 }
+
+// Fechar modal ao clicar fora (no fundo) - Admin
+window.addEventListener('click', function(event) {
+    if (event.target.classList.contains('modal')) {
+        window.closeModal(event.target.id);
+    }
+});
 
 window.showSection = function(sectionId) {
     document.getElementById('section-dashboard').style.display = 'none';
@@ -82,7 +91,7 @@ function atualizarListaAdmin() {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <img src="${prod.imagem || 'https://via.placeholder.com/300x180?text=Sem+Foto'}" alt="${prod.nome}">
+            <img src="${prod.imagem || 'https://via.placeholder.com/300x180?text=Sem+Foto'}" style="width:100%; height:180px; object-fit:cover; border-radius:8px;">
             <div style="display: flex; flex-direction: column; flex-grow: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span class="badge">${prod.categoria || 'Geral'}</span>

@@ -7,11 +7,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Splash Screen de Carregamento -->
-    <div id="splash-screen" class="splash-screen">
-        <img id="splash-logo" src="" alt="Carregando..." class="splash-logo" style="display: none;">
-    </div>
-
     <header class="shop-header">
         <div class="header-cover" id="header-cover-bg">
             <button onclick="toggleTheme()" class="theme-toggle" title="Alternar Tema" style="top: 15px; right: 15px;">🌓</button>
@@ -79,11 +74,24 @@
             <!-- Gerado dinamicamente pelo JS -->
         </div>
 
-        <div id="lista-produtos" class="produtos-grid">
-            <!-- Os produtos aparecerão aqui via JavaScript -->
-            <p class="loading">Carregando cardápio...</p>
         <div id="cardapio-secoes">
-            <!-- As seções de categorias aparecerão aqui -->
+            <!-- Skeleton Screen Inicial -->
+            <div class="produtos-grid">
+                <div class="card skeleton-card">
+                    <div class="skeleton" style="width: 100%; height: 180px; border-radius: 12px; margin-bottom: 12px;"></div>
+                    <div class="skeleton" style="width: 60%; height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
+                    <div class="skeleton" style="width: 90%; height: 14px; border-radius: 4px; margin-bottom: 15px;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="skeleton" style="width: 30%; height: 24px; border-radius: 4px;"></div>
+                        <div class="skeleton" style="width: 80px; height: 35px; border-radius: 10px;"></div>
+                    </div>
+                </div>
+                <div class="card skeleton-card" style="display: none; @media (min-width: 768px) { display: flex; }">
+                    <div class="skeleton" style="width: 100%; height: 180px; border-radius: 12px; margin-bottom: 12px;"></div>
+                    <div class="skeleton" style="width: 60%; height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
+                    <div class="skeleton" style="width: 30%; height: 24px; border-radius: 4px;"></div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -108,6 +116,7 @@
     <!-- Modal de Resumo -->
     <div id="modal-carrinho" class="modal">
         <div class="modal-content">
+            <button onclick="fecharModal()" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
             <div class="step-progress-container">
                 <div class="step-dot active" data-step="1">1</div>
                 <div class="step-dot" data-step="2">2</div>
@@ -186,6 +195,16 @@
                     </select>
                 </div>
 
+                <div id="campo-troco" class="form-group hidden">
+                    <label>Troco para quanto?</label>
+                    <input type="number" id="troco-para" step="0.01" placeholder="Ex: 50.00">
+                </div>
+
+                <div class="form-group">
+                    <label>Observações Gerais</label>
+                    <textarea id="observacoes" rows="2" placeholder="Observações sobre a entrega ou retirada..."></textarea>
+                </div>
+
                 <div class="form-group">
                     <label>Cupom?</label>
                     <div class="coupon-group">
@@ -210,6 +229,7 @@
     <!-- Modal de PIX -->
     <div id="modal-pix" class="modal">
         <div class="modal-content" style="text-align: center;">
+            <button onclick="closeModal('modal-pix')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
             <h2 style="color: #32bcad;">Pagamento via PIX</h2>
             <p>Seu pedido foi enviado! Para agilizar a preparação, realize o pagamento agora:</p>
             <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin: 20px 0; word-break: break-all;">
@@ -223,6 +243,7 @@
     <!-- Modal: Cadastro Lista VIP -->
     <div id="modal-vip" class="modal">
         <div class="modal-content">
+            <button onclick="closeModal('modal-vip')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
             <h2>Entrar para o Clube VIP</h2>
             <p style="color: var(--text-muted); margin-bottom: 20px;">Fique por dentro das nossas melhores ofertas!</p>
             <div class="form-group">
@@ -241,6 +262,7 @@
     <!-- Modal: Indique e Ganhe -->
     <div id="modal-referral" class="modal">
         <div class="modal-content" style="text-align: center;">
+            <button onclick="closeModal('modal-referral')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
             <h2 style="color: #4f46e5;">Indique um Amigo</h2>
             <p style="color: var(--text-muted); margin-bottom: 20px;">Ao compartilhar seu link, seu amigo ganha um cupom automático para o primeiro pedido!</p>
             <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
@@ -255,6 +277,7 @@
     <!-- Modal de Sucesso -->
     <div id="modal-success" class="modal">
         <div class="modal-content" style="text-align: center;">
+            <button onclick="closeModal('modal-success')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
             <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
                 <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
                 <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
@@ -265,33 +288,10 @@
         </div>
     </div>
 
-    <!-- Modal de Customização do Produto -->
-    <div id="modal-detalhes-produto" class="modal">
-        <div class="modal-content">
-            <h2 id="detalhe-nome">Nome do Produto</h2>
-            <p id="detalhe-descricao" style="color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem;"></p>
-            
-            <div class="option-group">
-                <span class="option-title">Observações (Ponto, retirar itens...)</span>
-                <textarea id="custom-obs" rows="2" placeholder="Ex: Carne bem passada, sem cebola..."></textarea>
-            </div>
-
-            <div class="option-group" id="grupo-extras" style="display: none;">
-                <span class="option-title">Deseja Adicionais?</span>
-                <div id="lista-extras-disponiveis"></div>
-            </div>
-
-            <div id="secao-upsell" style="display: none;">
-                <p class="upsell-title">Aproveite e adicione:</p>
-                <div class="upsell-container" id="lista-extras-sugeridos"></div>
-            </div>
-
-            <button id="btn-confirmar-adicao" class="btn-add" style="width: 100%; background: var(--success);">Adicionar R$ <span id="total-detalhe">0.00</span></button>
-            <button onclick="document.getElementById('modal-detalhes-produto').style.display='none'" style="background: none; border: none; color: var(--text-muted); width: 100%; margin-top: 10px; cursor: pointer;">Cancelar</button>
-        </div>
-    </div>
-
     <div id="toast-container" class="toast-container"></div>
+
+    <!-- Biblioteca de Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <script>
         // Identificação da Loja via URL
@@ -299,7 +299,7 @@
         const restauranteAtual = urlParams.get('loja');
 
         if (!restauranteAtual) {
-            document.body.innerHTML = '<div style="text-align:center; padding:50px;"><h1>Loja não encontrada</h1><p>Verifique o link e tente novamente.</p></div>';
+            window.location.href = 'login.html';
         }
 
         // Carregar Configurações Específicas desta Loja
@@ -338,7 +338,17 @@
         const PEDIDO_MINIMO = parseFloat(configLoja.pedido_minimo) || 0;
         const FRETE_GRATIS_VALOR = parseFloat(configLoja.frete_gratis_valor) || 0;
 
-        let produtoSelecionadoTemp = null;
+        const iconMap = {
+            'Lanches': 'sandwich',
+            'Pizzas': 'pizza',
+            'Acompanhamentos': 'utensils',
+            'Bebidas': 'cup-soda',
+            'Sobremesas': 'ice-cream',
+            'Combos': 'package',
+            'Destaques': 'star',
+            'Outros': 'plus-circle'
+        };
+
         let currentStep = 1;
 
         function changeStep(step) {
@@ -364,7 +374,7 @@
                 dot.classList.toggle('completed', dStep < step);
             });
 
-            if (step === 2) renderModernSelection('modern-upsell-list', ['Sobremesas', 'Lanches', 'Outros']);
+            if (step === 2) renderModernSelection('modern-upsell-list', ['Acompanhamentos']);
             if (step === 3) renderModernSelection('modern-beverages-list', ['Bebidas']);
             if (step === 4) renderResumoFinal();
         }
@@ -471,6 +481,7 @@
             changeStep(1);
             toggleEnderecoField();
             document.getElementById('modal-carrinho').style.display = 'flex';
+            document.body.classList.add('no-scroll');
         }
 
         // Função para verificar Cupom Automático via URL
@@ -498,22 +509,6 @@
             const cupomDestaque = Object.keys(cuponsDaLoja)[0] || "PROMO10";
             const link = `${window.location.origin}${window.location.pathname}?loja=${restauranteAtual}&cupom=${cupomDestaque}`;
             document.getElementById('referral-link-display').innerText = link;
-        }
-
-        // Função da Splash Screen
-        function iniciarSplashScreen() {
-            const splash = document.getElementById('splash-screen');
-            const splashLogo = document.getElementById('splash-logo');
-            if (configLoja.logo) {
-                splashLogo.src = configLoja.logo;
-                splashLogo.style.display = 'block';
-            }
-
-            // Remove a splash após 2.5 segundos
-            setTimeout(() => {
-                splash.classList.add('hidden');
-                setTimeout(() => splash.remove(), 500); // Remove do DOM após a transição
-            }, 2500);
         }
 
         // Persistência do Carrinho: Carrega o que estava salvo
@@ -567,7 +562,7 @@
             }, 3000);
         }
 
-        function carregarCardapio(termoBusca = '') {
+        function carregarCardapio(categoriaFiltro = 'Todos', termoBusca = '') {
             const container = document.getElementById('cardapio-secoes');
             const filtroNav = document.getElementById('filtros');
             const produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
@@ -577,16 +572,27 @@
                 container.innerHTML = '<p class="loading">O cardápio está vazio.</p>';
                 return;
             }
-
-            // 1. Agrupar produtos por categoria
+            // 1. Filtrar e Agrupar produtos
             const categorias = {};
-            meusProdutos.forEach(p => {
+            
+            let produtosProcessados = meusProdutos;
+
+            // Aplicar Filtro de Categoria ou Tag
+            if (categoriaFiltro !== 'Todos') {
+                if (['tagVeggie', 'tagSpicy', 'tagFeatured'].includes(categoriaFiltro)) {
+                    produtosProcessados = produtosProcessados.filter(p => p[categoriaFiltro]);
+                } else {
+                    produtosProcessados = produtosProcessados.filter(p => p.categoria === categoriaFiltro);
+                }
+            }
+
+            produtosProcessados.forEach(p => {
                 if (!categorias[p.categoria]) categorias[p.categoria] = [];
                 categorias[p.categoria].push(p);
             });
 
             // 2. Ordenar categorias (Combos primeiro, Bebidas por último, etc.)
-            const ordem = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Porções', 'Sobremesas', 'Bebidas'];
+            const ordem = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Acompanhamentos', 'Porções', 'Sobremesas', 'Bebidas'];
             const catsSorted = Object.keys(categorias).sort((a, b) => {
                 let idxA = ordem.indexOf(a);
                 let idxB = ordem.indexOf(b);
@@ -608,10 +614,12 @@
                 }
 
                 if (items.length > 0) {
+                    const iconName = iconMap[cat] || 'package';
+
                     // Adicionar botão na barra sticky
                     const btn = document.createElement('button');
                     btn.className = `filter-btn ${idx === 0 && !termoBusca ? 'active' : ''}`;
-                    btn.innerText = cat;
+                    btn.innerHTML = `<i data-lucide="${iconName}" style="width:16px; height:16px"></i> ${cat}`;
                     btn.onclick = (e) => scrollToCategory(catId, e.currentTarget);
                     filtroNav.appendChild(btn);
 
@@ -619,7 +627,7 @@
                     const section = document.createElement('section');
                     section.className = 'category-section';
                     section.id = catId;
-                    section.innerHTML = `<h2 class="category-title">${cat}</h2>`;
+                    section.innerHTML = `<h2 class="category-title"><i data-lucide="${iconName}"></i> ${cat}</h2>`;
 
                     const grid = document.createElement('div');
                     grid.className = 'produtos-grid';
@@ -636,7 +644,7 @@
                                     <p style="font-size: 0.85rem; margin-bottom: 10px;">${prod.descricao || ''}</p>
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <span class="preco">R$ ${parseFloat(prod.preco).toFixed(2)}</span>
-                                        <button class="btn-add" style="margin: 0; padding: 6px 12px;" onclick="abrirModalProduto(${prodData})">Adicionar</button>
+                                        <button class="btn-add" style="margin: 0; padding: 6px 12px;" onclick="adicionarAoCarrinho(${prodData})">Adicionar</button>
                                     </div>
                                 </div>
                             </div>`;
@@ -646,6 +654,9 @@
                     container.appendChild(section);
                 }
             });
+
+            // Renderiza os ícones após inserir o HTML
+            lucide.createIcons();
         }
 
         function scrollToCategory(id, btn) {
@@ -855,6 +866,7 @@
 
         function fecharModal() {
             document.getElementById('modal-carrinho').style.display = 'none';
+            document.body.classList.remove('no-scroll');
         }
 
         function finalizarPedido() {
@@ -1044,8 +1056,14 @@
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         };
 
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+            document.body.classList.remove('no-scroll');
+        }
+        function openModal(id) { 
+            document.getElementById(id).style.display = 'flex'; 
+            document.body.classList.add('no-scroll');
+        }
 
         function copiarPix() {
             const chave = document.getElementById('chave-pix-valor').innerText;
@@ -1153,16 +1171,26 @@
             }
         }
 
+        // Fechar qualquer modal ao clicar no fundo (área externa)
+        window.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                closeModal(event.target.id);
+            }
+        });
+
+        function verificarCarrinhoAbandonado() { console.log("Verificando carrinho..."); }
+
         // Event listener para o tipo de pedido
         document.getElementById('tipo-pedido-toggle').addEventListener('change', toggleEnderecoField);
 
         function filtrar(cat, event) {
             const termo = document.getElementById('inputBusca').value;
+            
             // Remove a classe 'active' de todos os botões de filtro
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             
-            // Centraliza o botão clicado na rolagem horizontal
             if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
                 event.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             }
             
@@ -1202,7 +1230,6 @@
         atualizarPontosUI();
         verificarLinkDireto();
         iniciarContagemRegressiva();
-        iniciarSplashScreen();
         verificarCupomURL();
         gerarLinkExibicao();
         socialProofLoop();
