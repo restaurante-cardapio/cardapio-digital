@@ -1,0 +1,5 @@
+# Arquivos do Sistema
+.DS_Store
+Thumbs.db
+*.log
+.vscode/

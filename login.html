@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+    <div class="login-card" id="card-auth">
+        <div id="login-section">
+            <h2>Entrar</h2>
+            <p style="color: var(--text-muted); margin-bottom: 25px;">Acesse sua conta</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="usuario" placeholder="Seu usuário" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="senha" placeholder="••••" required>
+                </div>
+                <button type="submit" id="btnSalvar">Entrar</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">Não tem conta? <a href="#" onclick="toggleAuth(true)" style="color: var(--primary-color);">Cadastre-se</a></p>
+            </form>
+        </div>
+
+        <div id="register-section" style="display: none;">
+            <h2>Criar Conta</h2>
+            <p style="color: var(--text-muted); margin-bottom: 25px;">Escolha como deseja usar o app</p>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="reg-usuario" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="reg-senha" required>
+                </div>
+                <div class="form-group">
+                    <label>Eu sou:</label>
+                    <select id="reg-role" required>
+                        <option value="comprador">🛍️ Comprador (Quero pedir)</option>
+                        <option value="restaurante">👨‍🍳 Restaurante (Quero vender)</option>
+                    </select>
+                </div>
+                <button type="submit" id="btnSalvar" style="background: var(--success);">Cadastrar</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">Já tem conta? <a href="#" onclick="toggleAuth(false)" style="color: var(--primary-color);">Faça Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        function toggleAuth(isRegister) {
+            document.getElementById('login-section').style.display = isRegister ? 'none' : 'block';
+            document.getElementById('register-section').style.display = isRegister ? 'block' : 'none';
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                toast.addEventListener('animationend', () => {
+                    toast.remove();
+                });
+            }, 3000);
+        }
+
+        // Cadastro
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('reg-usuario').value;
+            const pass = document.getElementById('reg-senha').value;
+            const role = document.getElementById('reg-role').value;
+
+            let usuarios = JSON.parse(localStorage.getItem('usuarios_app')) || [];
+            
+            if (usuarios.find(u => u.user === user)) {
+                return showToast('Este usuário já existe!', 'error');
+            }
+
+            usuarios.push({ user, pass, role });
+            localStorage.setItem('usuarios_app', JSON.stringify(usuarios));
+            showToast('Cadastro realizado com sucesso! Faça login.');
+            toggleAuth(false);
+        });
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('usuario').value;
+            const pass = document.getElementById('senha').value;
+
+            const usuarios = JSON.parse(localStorage.getItem('usuarios_app')) || [];
+            const usuarioEncontrado = usuarios.find(u => u.user === user && u.pass === pass);
+
+            if (usuarioEncontrado) {
+                // Salva a sessão do usuário
+                localStorage.setItem('usuario_logado', JSON.stringify(usuarioEncontrado));
+                
+                if (usuarioEncontrado.role === 'restaurante') {
+                    window.location.href = 'admin-produtos.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
+            } else {
+                showToast('Usuário ou senha incorretos!', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

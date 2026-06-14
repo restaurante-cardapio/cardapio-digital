@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Produto - Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script>
+        // Verificação de segurança por Perfil
+        const sessao = JSON.parse(localStorage.getItem('usuario_logado'));
+        if (!sessao || sessao.role !== 'restaurante') {
+            alert('Acesso restrito a administradores de restaurante.');
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body>
+    <header class="admin-header">
+        <div class="header-cover" id="admin-cover-bg">
+            <a href="index.html" class="btn-secondary" style="top: 15px; left: 15px;">← Cardápio</a>
+            <button onclick="logout()" class="btn-secondary" style="top: 15px; left: auto; right: 15px;">Sair</button>
+        </div>
+        <div class="header-info">
+            <img id="logo-admin" class="restaurant-logo" style="display: none;" alt="Logo">
+            <h1>Painel Gestor</h1>
+            <p>Gerencie pedidos e produtos</p>
+        </div>
+    </header>
+
+    <nav class="admin-nav">
+        <a onclick="showSection('dashboard')" class="nav-item active" id="nav-dashboard">Visão Geral</a>
+        <a onclick="showSection('cardapio')" class="nav-item" id="nav-cardapio">Meu Cardápio</a>
+        <a onclick="showSection('marketing')" class="nav-item" id="nav-marketing">Marketing</a>
+        <a onclick="openModal('modal-config')" class="nav-item">Configurações</a>
+    </nav>
+
+    <div class="container">
+        <!-- SEÇÃO: DASHBOARD -->
+        <section id="section-dashboard">
+            <div class="last-order-banner" style="background: #e0f2fe; border-color: #bae6fd; margin-bottom: 20px;">
+                <h4 style="text-align: left; margin-bottom: 5px;">Link da sua Loja:</h4>
+                <code id="link-loja-exibicao" style="background: white; padding: 5px 10px; border-radius: 5px; display: block; margin-bottom: 10px;"></code>
+                <button onclick="copiarLinkLoja()" class="btn-edit" style="margin-top:0; padding: 5px 15px;">Copiar Link para Clientes</button>
+            </div>
+
+            <h2>Relatório de Vendas (Hoje)</h2>
+            <div class="report-grid">
+                <div class="report-card">
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Total de Pedidos</p>
+                    <h3 id="report-pedidos">0</h3>
+                </div>
+                <div class="report-card">
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Faturamento Total</p>
+                    <h3 id="report-faturamento">R$ 0.00</h3>
+                </div>
+                <div class="report-card">
+                    <button onclick="limparHistoricoVendas()" class="btn-danger" style="margin-top:0; font-size: 0.8rem;">Zerar Relatório</button>
+                </div>
+            </div>
+
+            <hr>
+            <h2>Pedidos Recentes</h2>
+            <div id="lista-pedidos-historico" style="margin-bottom: 40px;"></div>
+        </section>
+
+        <!-- SEÇÃO: MARKETING -->
+        <section id="section-marketing" style="display: none;">
+            <div class="section-header">
+                <h2>Ferramentas de Marketing</h2>
+            </div>
+            
+            <div class="report-grid">
+                <div class="report-card">
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Clientes na Lista VIP</p>
+                    <h3 id="marketing-leads-count">0</h3>
+                </div>
+                <div class="report-card">
+                    <button onclick="copiarListaVIP()" class="btn-edit" style="margin-top:0;">Copiar Lista de Contatos</button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px; text-align: left;">
+                <h4 style="text-align: left; margin-bottom: 10px;">Clientes Interessados (Leads)</h4>
+                <div id="lista-leads-vip" style="max-height: 300px; overflow-y: auto; font-size: 0.9rem;"></div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO: MEU CARDÁPIO -->
+        <section id="section-cardapio" style="display: none;">
+            <div class="section-header">
+                <h2>Itens do Cardápio</h2>
+                <button onclick="openModal('modal-produto')" class="btn-add btn-add-novo">+ Novo Produto</button>
+            </div>
+            <div id="lista-admin" class="produtos-grid"></div>
+        </section>
+    </div>
+
+    <!-- MODAL: CADASTRO DE PRODUTO -->
+    <div id="modal-produto" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-titulo">Novo Produto</h2>
+            <form id="cadastroProdutoForm">
+            <div class="form-group">
+                <label for="nome">Nome do Produto</label>
+                <input type="text" id="nome" placeholder="Ex: Pizza Calabresa" required>
+            </div>
+
+            <div class="form-group">
+                <label for="preco">Preço (R$)</label>
+                <input type="number" id="preco" step="0.01" placeholder="0.00" required>
+            </div>
+
+            <div class="form-group">
+                <label for="ofertaExpira">Oferta termina em (Opcional)</label>
+                <input type="datetime-local" id="ofertaExpira">
+            </div>
+
+            <div class="form-group">
+                <label for="estoque">Estoque Atual (Vazio = Ilimitado)</label>
+                <input type="number" id="estoque" placeholder="Ex: 50" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="categoria">Categoria</label>
+                <select id="categoria" required>
+                    <option value="Lanches">Lanches</option>
+                    <option value="Pizzas">Pizzas</option>
+                    <option value="Bebidas">Bebidas</option>
+                    <option value="Sobremesas">Sobremesas</option>
+                    <option value="Outros">Outros</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="imagem">Foto do Produto</label>
+                <input type="file" id="imagem" accept="image/*">
+                <input type="hidden" id="imagemBase64"> <!-- Armazena a imagem atual ao editar -->
+            </div>
+
+            <div class="form-group">
+                <label>Destaques e Preferências</label>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px;">
+                    <label style="font-weight: normal;"><input type="checkbox" id="tagVeggie" style="width: auto;"> Vegetariano</label>
+                    <label style="font-weight: normal;"><input type="checkbox" id="tagSpicy" style="width: auto;"> Picante</label>
+                    <label style="font-weight: normal;"><input type="checkbox" id="tagFeatured" style="width: auto;"> Destaque da Casa</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="adicionais">Adicionais (Opcional - Ex: Bacon:3.00, Queijo:2.00)</label>
+                <textarea id="adicionais" rows="2" placeholder="Nome:Preço, Nome:Preço..."></textarea>
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                <input type="checkbox" id="disponivel" checked style="width: auto;">
+                <label for="disponivel" style="margin-bottom: 0;">Produto disponível para venda</label>
+            </div>
+
+            <div class="form-group">
+                <label for="descricao">Descrição</label>
+                <textarea id="descricao" rows="3" placeholder="Descreva os ingredientes..."></textarea>
+            </div>
+
+            <button type="submit" id="btnSalvar">Cadastrar Produto</button>
+            <button type="button" onclick="closeModal('modal-produto')" style="background: none; color: var(--text-muted); border: none; width: 100%; cursor: pointer; margin-top: 15px;">Cancelar</button>
+        </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIGURAÇÕES -->
+    <div id="modal-config" class="modal">
+        <div class="modal-content">
+            <h2>Configurações da Loja</h2>
+            <form id="configLojaForm">
+                <div class="form-group">
+                    <label>Logo do Restaurante</label>
+                    <input type="file" id="inputLogo" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>WhatsApp (DDI+DDD+Número)</label>
+                    <input type="text" id="inputWhatsapp" placeholder="5516999999999">
+                </div>
+                <div class="form-group">
+                    <label>Banners de Promoção (Selecione um ou mais)</label>
+                    <input type="file" id="inputBanners" accept="image/*" multiple>
+                </div>
+                <div class="form-group">
+                    <label>Cor Principal da Loja</label>
+                    <input type="color" id="inputCorPrincipal" style="height: 45px; cursor: pointer;">
+                </div>
+                <div class="form-group">
+                    <label>Chave PIX (Para Copia e Cola)</label>
+                    <input type="text" id="inputPix" placeholder="CNPJ, E-mail ou Celular">
+                </div>
+                <div class="form-group">
+                    <label>Cupons (Formato: CODIGO:VALOR, ...)</label>
+                    <textarea id="inputCupons" rows="2" placeholder="PROMO10:10.00, VIP5:5.00"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Taxa de Entrega Fixa (R$)</label>
+                    <input type="number" id="inputTaxa" step="0.01" placeholder="5.00">
+                </div>
+                <div class="form-group">
+                    <label>Tempo Estimado (ex: 40-60)</label>
+                    <input type="text" id="inputTempo" placeholder="40-60">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex:1"><label>Abertura</label><input type="number" id="inputAbertura"></div>
+                    <div class="form-group" style="flex:1"><label>Fechamento</label><input type="number" id="inputFechamento"></div>
+                </div>
+                <div class="form-group">
+                    <label>Frete Grátis acima de (R$)</label>
+                    <input type="number" id="inputFreteGratis" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Pedido Mínimo (R$)</label>
+                    <input type="number" id="inputPedidoMinimo" step="0.01">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="lojaFechadaManualmente" style="width: auto;">
+                    <label for="lojaFechadaManualmente" style="margin: 0; color: var(--danger); font-weight: bold;">Fechar Loja Manualmente</label>
+                </div>
+                <button type="submit" class="btn-add" style="width: 100%;">Salvar Configurações</button>
+                <button type="button" onclick="closeModal('modal-config')" style="background: none; color: var(--text-muted); border: none; width: 100%; cursor: pointer; margin-top: 15px;">Fechar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="script.js"></script>
+    <script>
+        // Exibir link da loja no Dashboard
+        if (sessaoAtiva) {
+            const urlBase = window.location.href.split('admin-produtos.html')[0];
+            const linkCompleto = `${urlBase}index.html?loja=${sessaoAtiva.user}`;
+            document.getElementById('link-loja-exibicao').innerText = linkCompleto;
+        }
+        function copiarLinkLoja() {
+            const link = document.getElementById('link-loja-exibicao').innerText;
+            navigator.clipboard.writeText(link);
+            alert('Link copiado! Envie este link para seus clientes.');
+        }
+    </script>
+</body>
+</html>

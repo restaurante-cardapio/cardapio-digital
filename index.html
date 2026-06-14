@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardápio Digital - Meu Restaurante</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Splash Screen de Carregamento -->
+    <div id="splash-screen" class="splash-screen">
+        <img id="splash-logo" src="" alt="Carregando..." class="splash-logo" style="display: none;">
+    </div>
+
+    <header class="shop-header">
+        <div class="header-cover" id="header-cover-bg">
+            <button onclick="toggleTheme()" class="theme-toggle" title="Alternar Tema" style="top: 15px; right: 15px;">🌓</button>
+        </div>
+        <div class="header-info">
+            <img id="logo-restaurante" class="restaurant-logo" style="display: none;" alt="Logo">
+            <h1 id="nome-loja-header">Meu Restaurante</h1>
+            <p>O melhor sabor no conforto da sua casa</p>
+            <div style="display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <div id="status-loja"></div>
+                <div id="tempo-entrega-display" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: none;">
+                    🕒 <span id="tempo-min-max"></span> min
+                </div>
+            </div>
+            <div id="pontos-fidelidade" class="loyalty-badge" style="display: none; margin-top: 8px;"></div>
+        </div>
+    </header>
+
+    <main class="container-shop">
+        <div id="banner-carousel" class="banner-carousel"></div>
+
+        <div id="ultimo-pedido-container" class="last-order-banner" style="display: none;">
+            <div class="last-order-content">
+                <div>
+                    <span class="badge" style="color: #92400e;">Recompra</span>
+                    <h4 style="margin: 5px 0 0 0;">Repetir último pedido?</h4>
+                    <p id="detalhes-ultimo-pedido" style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);"></p>
+                </div>
+                <button onclick="repetirUltimoPedido()" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: #f59e0b;">Repetir</button>
+            </div>
+        </div>
+
+        <div class="referral-banner">
+            <div style="text-align: left;">
+                <h4 style="margin: 0; color: white;">📢 Indique e Ganhe!</h4>
+                <p style="margin: 4px 0 0 0; font-size: 0.85rem; opacity: 0.9;">Convide um amigo e envie um desconto para ele!</p>
+            </div>
+            <button onclick="openModal('modal-referral')" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: white; color: #4f46e5;">Gerar Link</button>
+        </div>
+
+        <div class="last-order-banner" style="background: #ecfdf5; border-color: #a7f3d0; margin-bottom: 24px;">
+            <div class="last-order-content">
+                <div style="text-align: left;">
+                    <h4 style="margin: 0; color: #065f46;">💎 Clube VIP WhatsApp</h4>
+                    <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #047857;">Receba promoções exclusivas e novidades!</p>
+                </div>
+                <button onclick="openModal('modal-vip')" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: #10b981;">Participar</button>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="inputBusca" placeholder="Pesquisar pratos..." oninput="filtrarPorBusca()">
+        </div>
+
+        <div class="filter-container" id="filtros">
+            <button class="filter-btn active" data-filter="Todos" onclick="filtrar('Todos')">🍽️ Todos</button>
+            <button class="filter-btn" data-filter="Lanches" onclick="filtrar('Lanches')">🍔 Lanches</button>
+            <button class="filter-btn" data-filter="Pizzas" onclick="filtrar('Pizzas')">🍕 Pizzas</button>
+            <button class="filter-btn" data-filter="Bebidas" onclick="filtrar('Bebidas')">🥤 Bebidas</button>
+            <button class="filter-btn" data-filter="Sobremesas" onclick="filtrar('Sobremesas')">🍦 Sobremesas</button>
+            <button class="filter-btn tag-filter" data-filter="tagVeggie" onclick="filtrar('tagVeggie')">🥦 Veggie</button>
+            <button class="filter-btn tag-filter" data-filter="tagSpicy" onclick="filtrar('tagSpicy')">🌶️ Picante</button>
+            <button class="filter-btn tag-filter" data-filter="tagFeatured" onclick="filtrar('tagFeatured')">⭐ Destaque</button>
+            <!-- Adicione mais botões de tags aqui se tiver outras tags -->
+            <!-- Gerado dinamicamente pelo JS -->
+        </div>
+
+        <div id="lista-produtos" class="produtos-grid">
+            <!-- Os produtos aparecerão aqui via JavaScript -->
+            <p class="loading">Carregando cardápio...</p>
+        <div id="cardapio-secoes">
+            <!-- As seções de categorias aparecerão aqui -->
+        </div>
+    </main>
+
+    <!-- Rodapé do Total -->
+    <div class="cart-footer">
+        <div style="flex: 1;">
+            <div id="frete-info" style="font-size: 0.75rem; margin-bottom: 4px;"></div>
+            <div class="shipping-progress-container" id="frete-progress-cont" style="display:none;">
+                <div class="shipping-progress-bar" id="frete-progress-bar" style="width: 0%"></div>
+            </div>
+            <div style="margin-top: 5px;">
+                <strong>Total: R$ <span id="total-valor">0.00</span></strong>
+            </div>
+        </div>
+        <div class="cart-icon-container">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span id="cart-count" class="cart-count-badge">0</span>
+        </div>
+        <button onclick="abrirResumo()" style="background: var(--primary-color); color: white; border: none; padding: 14px 28px; border-radius: 100px; cursor: pointer; font-weight: 800; margin-left: 10px; box-shadow: 0 10px 20px rgba(var(--primary-color-rgb), 0.3);">Ver Sacola</button>
+    </div>
+
+    <!-- Modal de Resumo -->
+    <div id="modal-carrinho" class="modal">
+        <div class="modal-content">
+            <div class="step-progress-container">
+                <div class="step-dot active" data-step="1">1</div>
+                <div class="step-dot" data-step="2">2</div>
+                <div class="step-dot" data-step="3">3</div>
+                <div class="step-dot" data-step="4">4</div>
+            </div>
+
+            <!-- PASSO 1: Identificação -->
+            <div class="checkout-step active" id="step-1">
+                <h2 style="text-align: left; font-size: 1.6rem; margin-bottom: 20px;">Identificação</h2>
+                
+                <div class="checkout-section-title">📍 Como deseja receber?</div>
+                <div class="switch-container">
+                    <span class="switch-label">Retirada</span>
+                    <label class="switch">
+                        <input type="checkbox" id="tipo-pedido-toggle" checked onchange="toggleEnderecoField()">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="switch-label">Entrega</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Seu Nome</label>
+                    <input type="text" id="nome-cliente" placeholder="Ex: João Silva">
+                </div>
+                <div class="form-group">
+                    <label>WhatsApp</label>
+                    <input type="tel" id="telefone-cliente" placeholder="(00) 00000-0000">
+                </div>
+                <div class="form-group" id="div-endereco">
+                    <label>Endereço de Entrega</label>
+                    <input type="text" id="endereco-entrega" placeholder="Rua, número, bairro">
+                </div>
+
+                <div class="step-nav-buttons">
+                    <button onclick="fecharModal()" class="btn-edit" style="background:#64748b; flex:1">Sair</button>
+                    <button onclick="changeStep(2)" class="btn-add" style="flex:2">Avançar →</button>
+                </div>
+            </div>
+
+            <!-- PASSO 2: Upsell -->
+            <div class="checkout-step" id="step-2">
+                <h2 style="text-align: left; font-size: 1.5rem;">Turbine seu pedido!</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Aproveite e adicione um acompanhamento:</p>
+                <div id="modern-upsell-list" class="modern-selection-grid"></div>
+
+                <div class="step-nav-buttons">
+                    <button onclick="changeStep(1)" class="btn-edit" style="background:#64748b; flex:1">← Voltar</button>
+                    <button onclick="changeStep(3)" class="btn-add" style="flex:2">Ver Bebidas →</button>
+                </div>
+            </div>
+
+            <!-- PASSO 3: Bebidas -->
+            <div class="checkout-step" id="step-3">
+                <h2 style="text-align: left; font-size: 1.5rem;">Vai uma bebida?</h2>
+                <div id="modern-beverages-list" class="modern-selection-grid"></div>
+
+                <div class="step-nav-buttons">
+                    <button onclick="changeStep(2)" class="btn-edit" style="background:#64748b; flex:1">← Voltar</button>
+                    <button onclick="changeStep(4)" class="btn-add" style="flex:2">Pagar Agora →</button>
+                </div>
+            </div>
+
+            <!-- PASSO 4: Pagamento -->
+            <div class="checkout-step" id="step-4">
+                <h2 style="text-align: left; font-size: 1.5rem;">Revisão e Pagamento</h2>
+                <div class="checkout-section-title">🛒 Seu Carrinho</div>
+                <ul id="lista-carrinho" class="cart-item-list"></ul>
+
+                <div class="form-group">
+                    <label>Forma de Pagamento</label>
+                    <select id="forma-pagamento">
+                        <option value="Pix">Pix</option>
+                        <option value="Cartão">Cartão (Crédito/Débito)</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Cupom?</label>
+                    <div class="coupon-group">
+                        <input type="text" id="cupom-input" placeholder="Digite aqui">
+                        <button onclick="aplicarCupom()" class="btn-add" style="margin:0">OK</button>
+                    </div>
+                </div>
+
+                <div style="background: var(--text-main); color: white; padding: 20px; border-radius: 20px; text-align: center; margin: 20px 0;">
+                    <span id="label-entrega-resumo" style="font-size: 0.8rem; opacity: 0.7;">+ Taxa de Entrega: R$ <span id="modal-taxa">0.00</span></span><br>
+                    <strong style="font-size: 1.7rem;">Total: R$ <span id="modal-total" style="color: var(--success);">0.00</span></strong>
+                </div>
+
+                <div class="step-nav-buttons">
+                    <button onclick="changeStep(3)" class="btn-edit" style="background:#64748b; flex:1">← Voltar</button>
+                    <button onclick="finalizarPedido()" class="btn-add" style="flex:2; background:var(--success)">Enviar no WhatsApp 🚀</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de PIX -->
+    <div id="modal-pix" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h2 style="color: #32bcad;">Pagamento via PIX</h2>
+            <p>Seu pedido foi enviado! Para agilizar a preparação, realize o pagamento agora:</p>
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin: 20px 0; word-break: break-all;">
+                <strong id="chave-pix-valor"></strong>
+            </div>
+            <button onclick="copiarPix()" class="btn-add" style="background: #32bcad; width: 100%;">Copiar Chave PIX</button>
+            <button onclick="window.location.reload()" style="background: none; border: none; color: var(--text-muted); margin-top: 15px; cursor: pointer;">Fechar e Voltar ao Início</button>
+        </div>
+    </div>
+
+    <!-- Modal: Cadastro Lista VIP -->
+    <div id="modal-vip" class="modal">
+        <div class="modal-content">
+            <h2>Entrar para o Clube VIP</h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Fique por dentro das nossas melhores ofertas!</p>
+            <div class="form-group">
+                <label>Seu Nome</label>
+                <input type="text" id="vip-nome" placeholder="Como podemos te chamar?">
+            </div>
+            <div class="form-group">
+                <label>WhatsApp</label>
+                <input type="tel" id="vip-whatsapp" placeholder="(00) 00000-0000">
+            </div>
+            <button onclick="cadastrarVIP()" class="btn-add" style="width: 100%; background: #10b981;">Quero receber ofertas!</button>
+            <button onclick="closeModal('modal-vip')" style="background: none; border: none; color: var(--text-muted); width: 100%; margin-top: 10px; cursor: pointer;">Agora não</button>
+        </div>
+    </div>
+
+    <!-- Modal: Indique e Ganhe -->
+    <div id="modal-referral" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h2 style="color: #4f46e5;">Indique um Amigo</h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Ao compartilhar seu link, seu amigo ganha um cupom automático para o primeiro pedido!</p>
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">Seu link de indicação:</p>
+                <code id="referral-link-display" style="word-break: break-all; font-weight: bold; color: #4f46e5;"></code>
+            </div>
+            <button onclick="compartilharIndicacao()" class="btn-add" style="width: 100%; background: #4f46e5;">Compartilhar no WhatsApp</button>
+            <button onclick="closeModal('modal-referral')" style="background: none; border: none; color: var(--text-muted); width: 100%; margin-top: 15px; cursor: pointer;">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Sucesso -->
+    <div id="modal-success" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+                <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+            </svg>
+            <h2 style="color: var(--success); margin-top: 10px;">Pedido Enviado!</h2>
+            <p style="color: var(--text-muted); margin-top: 10px;">Seu pedido foi encaminhado com sucesso. Agora é só aguardar!</p>
+            <button onclick="window.location.reload()" class="btn-add" style="width: 100%; margin-top: 25px; background: var(--success);">Confirmar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Customização do Produto -->
+    <div id="modal-detalhes-produto" class="modal">
+        <div class="modal-content">
+            <h2 id="detalhe-nome">Nome do Produto</h2>
+            <p id="detalhe-descricao" style="color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem;"></p>
+            
+            <div class="option-group">
+                <span class="option-title">Observações (Ponto, retirar itens...)</span>
+                <textarea id="custom-obs" rows="2" placeholder="Ex: Carne bem passada, sem cebola..."></textarea>
+            </div>
+
+            <div class="option-group" id="grupo-extras" style="display: none;">
+                <span class="option-title">Deseja Adicionais?</span>
+                <div id="lista-extras-disponiveis"></div>
+            </div>
+
+            <div id="secao-upsell" style="display: none;">
+                <p class="upsell-title">Aproveite e adicione:</p>
+                <div class="upsell-container" id="lista-extras-sugeridos"></div>
+            </div>
+
+            <button id="btn-confirmar-adicao" class="btn-add" style="width: 100%; background: var(--success);">Adicionar R$ <span id="total-detalhe">0.00</span></button>
+            <button onclick="document.getElementById('modal-detalhes-produto').style.display='none'" style="background: none; border: none; color: var(--text-muted); width: 100%; margin-top: 10px; cursor: pointer;">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        // Identificação da Loja via URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const restauranteAtual = urlParams.get('loja');
+
+        if (!restauranteAtual) {
+            document.body.innerHTML = '<div style="text-align:center; padding:50px;"><h1>Loja não encontrada</h1><p>Verifique o link e tente novamente.</p></div>';
+        }
+
+        // Carregar Configurações Específicas desta Loja
+        const todasConfigs = JSON.parse(localStorage.getItem('configs_restaurantes')) || {};
+        const configLoja = todasConfigs[restauranteAtual] || {};
+
+        if (configLoja.cor_principal) {
+            document.documentElement.style.setProperty('--primary-color', configLoja.cor_principal);
+            // Gera automaticamente uma cor mais escura para o hover/gradiente
+            const hex = configLoja.cor_principal.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            const corHover = `rgb(${Math.max(0, r-30)}, ${Math.max(0, g-30)}, ${Math.max(0, b-30)})`;
+            document.documentElement.style.setProperty('--primary-hover', corHover);
+        }
+
+        if (configLoja.logo) {
+            const logoImg = document.getElementById('logo-restaurante');
+            logoImg.src = configLoja.logo;
+            logoImg.style.display = 'block';
+        }
+
+        if (configLoja.tempo_entrega) {
+            document.getElementById('tempo-min-max').innerText = configLoja.tempo_entrega;
+            document.getElementById('tempo-entrega-display').style.display = 'block';
+        }
+
+        document.getElementById('nome-loja-header').innerText = restauranteAtual.toUpperCase();
+        document.title = `${restauranteAtual.toUpperCase()} - Cardápio Digital`;
+
+        const WHATSAPP_RESTAURANTE = configLoja.whatsapp || ""; 
+        const TAXA_ENTREGA = parseFloat(configLoja.taxa_entrega) || 0;
+        let HORA_ABERTURA = parseInt(configLoja.abertura) || 0;
+        let HORA_FECHAMENTO = parseInt(configLoja.fechamento) || 24;
+        const PEDIDO_MINIMO = parseFloat(configLoja.pedido_minimo) || 0;
+        const FRETE_GRATIS_VALOR = parseFloat(configLoja.frete_gratis_valor) || 0;
+
+        let produtoSelecionadoTemp = null;
+        let currentStep = 1;
+
+        function changeStep(step) {
+            // Validação simples para o passo 1
+            if (step > currentStep && currentStep === 1) {
+                const nome = document.getElementById('nome-cliente').value;
+                const tel = document.getElementById('telefone-cliente').value;
+                if (!nome || !tel) {
+                    return showToast("Preencha seu nome e telefone!", "error");
+                }
+                if (document.getElementById('tipo-pedido-toggle').checked && !document.getElementById('endereco-entrega').value) {
+                    return showToast("Informe o endereço de entrega!", "error");
+                }
+            }
+
+            currentStep = step;
+            document.querySelectorAll('.checkout-step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            
+            document.querySelectorAll('.step-dot').forEach(dot => {
+                const dStep = parseInt(dot.dataset.step);
+                dot.classList.toggle('active', dStep === step);
+                dot.classList.toggle('completed', dStep < step);
+            });
+
+            if (step === 2) renderModernSelection('modern-upsell-list', ['Sobremesas', 'Lanches', 'Outros']);
+            if (step === 3) renderModernSelection('modern-beverages-list', ['Bebidas']);
+            if (step === 4) renderResumoFinal();
+        }
+
+        function renderModernSelection(containerId, categories) {
+            const container = document.getElementById(containerId);
+            const produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
+            const items = produtos.filter(p => p.owner === restauranteAtual && categories.includes(p.categoria));
+            
+            container.innerHTML = items.map(p => {
+                const noCarrinho = carrinho.some(item => item.nome === p.nome);
+                return `
+                    <div class="selection-card ${noCarrinho ? 'selected' : ''}" onclick="toggleSelectionItem(this, ${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                        <img src="${p.imagem || 'https://via.placeholder.com/50x50'}">
+                        <div class="selection-card-info">
+                            <b>${p.nome}</b>
+                            <span>+ R$ ${parseFloat(p.preco).toFixed(2)}</span>
+                        </div>
+                        <div class="selection-check">${noCarrinho ? '✓' : '+'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleSelectionItem(el, prod) {
+            const idx = carrinho.findIndex(item => item.nome === prod.nome);
+            if (idx > -1) {
+                carrinho.splice(idx, 1);
+                el.classList.remove('selected');
+                el.querySelector('.selection-check').innerText = '+';
+            } else {
+                carrinho.push({ nome: prod.nome, preco: parseFloat(prod.preco), quantidade: 1 });
+                el.classList.add('selected');
+                el.querySelector('.selection-check').innerText = '✓';
+            }
+            salvarCarrinho();
+            atualizarTotalBarra();
+        }
+
+        // Função para renderizar a lista de itens no Passo 4 (Revisão)
+        function renderResumoFinal() {
+            const listaElement = document.getElementById('lista-carrinho');
+            listaElement.innerHTML = '';
+            let subtotal = 0;
+
+            if (carrinho.length === 0) {
+                listaElement.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Sacola vazia</p>';
+                return;
+            }
+
+            carrinho.forEach((item, index) => {
+                const totalItem = item.preco * (item.quantidade || 1);
+                subtotal += totalItem;
+                listaElement.innerHTML += `
+                    <li>
+                        <div style="display:flex; flex-direction:column; text-align:left; gap:2px">
+                            <b style="color:var(--text-main)">${item.nome}</b>
+                            ${item.adicionais && item.adicionais.length > 0 ? 
+                                `<small style="color:var(--primary-color)">+ ${item.adicionais.map(a => a.nome).join(', ')}</small>` 
+                                : ''
+                            }
+                            <small style="color:var(--text-muted)">R$ ${item.preco.toFixed(2)} un.</small>
+                        </div>
+                        <div class="qty-controls">
+                            <button class="btn-qty" onclick="alterarQuantidade(${index}, -1)">-</button>
+                            <span style="color:var(--text-main); font-weight:800">${item.quantidade || 1}</span>
+                            <button class="btn-qty" onclick="alterarQuantidade(${index}, 1)">+</button>
+                        </div>
+                    </li>`;
+            });
+
+            const toggle = document.getElementById('tipo-pedido-toggle');
+            const tipoPedido = toggle && toggle.checked ? 'Entrega' : 'Retirada';
+            let taxa = (tipoPedido === 'Entrega') ? TAXA_ENTREGA : 0;
+            if (FRETE_GRATIS_VALOR > 0 && subtotal >= FRETE_GRATIS_VALOR) taxa = 0;
+
+            document.getElementById('modal-taxa').innerText = taxa.toFixed(2);
+            let totalFinal = subtotal + taxa - descontoCupom;
+            document.getElementById('modal-total').innerText = Math.max(0, totalFinal).toFixed(2);
+        }
+
+        function toggleTroco() {
+            const campo = document.getElementById('campo-troco');
+            const pag = document.getElementById('forma-pagamento').value;
+            if (pag === 'Dinheiro') {
+                campo.classList.remove('hidden');
+            } else {
+                campo.classList.add('hidden');
+            }
+        }
+
+        function abrirResumo() {
+            if (carrinho.length === 0) return showToast("Sua sacola está vazia!", "error");
+            
+            // Preenche dados salvos para conveniência
+            document.getElementById('nome-cliente').value = localStorage.getItem('cliente_nome') || '';
+            document.getElementById('telefone-cliente').value = localStorage.getItem('cliente_telefone') || '';
+            document.getElementById('endereco-entrega').value = localStorage.getItem('cliente_endereco') || '';
+            
+            const tipoPedidoSalvo = localStorage.getItem('cliente_tipo_pedido') || 'Entrega';
+            document.getElementById('tipo-pedido-toggle').checked = (tipoPedidoSalvo === 'Entrega');
+
+            currentStep = 1;
+            changeStep(1);
+            toggleEnderecoField();
+            document.getElementById('modal-carrinho').style.display = 'flex';
+        }
+
+        // Função para verificar Cupom Automático via URL
+        function verificarCupomURL() {
+            const cupomURL = urlParams.get('cupom');
+            if (cupomURL) {
+                const codigo = cupomURL.toUpperCase();
+                if (cuponsDaLoja[codigo]) {
+                    descontoCupom = cuponsDaLoja[codigo];
+                    localStorage.setItem('cupom_automatico', codigo);
+                    showToast(`Cupom ${codigo} aplicado automaticamente! ✨`);
+                    atualizarTotalBarra();
+                }
+            }
+        }
+
+        function compartilharIndicacao() {
+            const cupomDestaque = Object.keys(cuponsDaLoja)[0] || "PROMO10";
+            const link = `${window.location.origin}${window.location.pathname}?loja=${restauranteAtual}&cupom=${cupomDestaque}`;
+            const msg = `Ei! Estou te enviando um desconto para pedir na *${restauranteAtual.toUpperCase()}*! O cupom é aplicado direto no link: ${link}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function gerarLinkExibicao() {
+            const cupomDestaque = Object.keys(cuponsDaLoja)[0] || "PROMO10";
+            const link = `${window.location.origin}${window.location.pathname}?loja=${restauranteAtual}&cupom=${cupomDestaque}`;
+            document.getElementById('referral-link-display').innerText = link;
+        }
+
+        // Função da Splash Screen
+        function iniciarSplashScreen() {
+            const splash = document.getElementById('splash-screen');
+            const splashLogo = document.getElementById('splash-logo');
+            if (configLoja.logo) {
+                splashLogo.src = configLoja.logo;
+                splashLogo.style.display = 'block';
+            }
+
+            // Remove a splash após 2.5 segundos
+            setTimeout(() => {
+                splash.classList.add('hidden');
+                setTimeout(() => splash.remove(), 500); // Remove do DOM após a transição
+            }, 2500);
+        }
+
+        // Persistência do Carrinho: Carrega o que estava salvo
+        let carrinho = (JSON.parse(localStorage.getItem('carrinho_atual')) || []).map(item => ({
+            ...item,
+            quantidade: item.quantidade || 1
+        }));
+        
+        let descontoCupom = 0;
+        let cuponsDaLoja = {};
+
+        function salvarCarrinho() {
+            localStorage.setItem('carrinho_atual', JSON.stringify(carrinho));
+        }
+
+        function carregarCuponsLoja() {
+            if (configLoja.cupons) {
+                configLoja.cupons.split(',').forEach(c => {
+                    const [code, val] = c.split(':');
+                    if(code && val) cuponsDaLoja[code.trim().toUpperCase()] = parseFloat(val.trim());
+                });
+            }
+        }
+
+        function isLojaAberta() {
+            const agora = new Date();
+            const hora = agora.getHours();
+            const fechadaManualmente = localStorage.getItem('loja_fechada_manualmente') === 'true';
+
+            if (fechadaManualmente) {
+                return false; // Se fechada manualmente, está sempre fechada
+            }
+            return hora >= HORA_ABERTURA && hora < HORA_FECHAMENTO; // Verifica horário normal
+        }
+
+        function getMockSales() { return Math.floor(Math.random() * 50) + 10; }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                toast.addEventListener('animationend', () => {
+                    toast.remove();
+                });
+            }, 3000);
+        }
+
+        function carregarCardapio(termoBusca = '') {
+            const container = document.getElementById('cardapio-secoes');
+            const filtroNav = document.getElementById('filtros');
+            const produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
+            const meusProdutos = produtos.filter(p => p.owner === restauranteAtual);
+
+            if (meusProdutos.length === 0) {
+                container.innerHTML = '<p class="loading">O cardápio está vazio.</p>';
+                return;
+            }
+
+            // 1. Agrupar produtos por categoria
+            const categorias = {};
+            meusProdutos.forEach(p => {
+                if (!categorias[p.categoria]) categorias[p.categoria] = [];
+                categorias[p.categoria].push(p);
+            });
+
+            // 2. Ordenar categorias (Combos primeiro, Bebidas por último, etc.)
+            const ordem = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Porções', 'Sobremesas', 'Bebidas'];
+            const catsSorted = Object.keys(categorias).sort((a, b) => {
+                let idxA = ordem.indexOf(a);
+                let idxB = ordem.indexOf(b);
+                return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+            });
+
+            // 3. Limpar containers
+            filtroNav.innerHTML = '';
+            container.innerHTML = '';
+
+            // 4. Renderizar Seções
+            catsSorted.forEach((cat, idx) => {
+                const catId = `cat-${cat.replace(/\s+/g, '-').toLowerCase()}`;
+                let items = categorias[cat];
+
+                // Filtro de busca
+                if (termoBusca) {
+                    items = items.filter(p => p.nome.toLowerCase().includes(termoBusca.toLowerCase()));
+                }
+
+                if (items.length > 0) {
+                    // Adicionar botão na barra sticky
+                    const btn = document.createElement('button');
+                    btn.className = `filter-btn ${idx === 0 && !termoBusca ? 'active' : ''}`;
+                    btn.innerText = cat;
+                    btn.onclick = (e) => scrollToCategory(catId, e.currentTarget);
+                    filtroNav.appendChild(btn);
+
+                    // Criar Seção
+                    const section = document.createElement('section');
+                    section.className = 'category-section';
+                    section.id = catId;
+                    section.innerHTML = `<h2 class="category-title">${cat}</h2>`;
+
+                    const grid = document.createElement('div');
+                    grid.className = 'produtos-grid';
+
+                    items.forEach(prod => {
+                        const prodData = JSON.stringify(prod).replace(/"/g, '&quot;');
+                        const isPriority = prod.tagFeatured || cat === 'Combos';
+                        
+                        grid.innerHTML += `
+                            <div class="card ${isPriority ? 'priority-item' : ''} reveal">
+                                <img src="${prod.imagem || 'https://via.placeholder.com/300x180'}" alt="${prod.nome}">
+                                <div style="flex: 1; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                                    <h3 style="text-align: left; margin: 0 0 5px 0;">${prod.nome}</h3>
+                                    <p style="font-size: 0.85rem; margin-bottom: 10px;">${prod.descricao || ''}</p>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span class="preco">R$ ${parseFloat(prod.preco).toFixed(2)}</span>
+                                        <button class="btn-add" style="margin: 0; padding: 6px 12px;" onclick="abrirModalProduto(${prodData})">Adicionar</button>
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+
+                    section.appendChild(grid);
+                    container.appendChild(section);
+                }
+            });
+        }
+
+        function scrollToCategory(id, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const target = document.getElementById(id);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Centraliza o botão na barra horizontal
+                btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        }
+
+        function abrirModalProduto(prod) {
+            produtoSelecionadoTemp = prod;
+            document.getElementById('detalhe-nome').innerText = prod.nome;
+            document.getElementById('detalhe-descricao').innerText = prod.descricao || "";
+            document.getElementById('custom-obs').value = "";
+            document.getElementById('total-detalhe').innerText = parseFloat(prod.preco).toFixed(2);
+            
+            // Sugestão de Upsell (Bebidas ou Sobremesas)
+            const upsellList = document.getElementById('lista-extras-sugeridos');
+            const produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
+            const sugeridos = produtos.filter(p => p.owner === restauranteAtual && (p.categoria === 'Bebidas' || p.categoria === 'Sobremesas')).slice(0, 3);
+            
+            if(sugeridos.length > 0 && prod.categoria !== 'Bebidas') {
+                document.getElementById('secao-upsell').style.display = 'block';
+                upsellList.innerHTML = sugeridos.map(s => `
+                    <div class="upsell-item" onclick='adicionarUpsellRapido(${JSON.stringify(s).replace(/'/g, "&apos;")})'>
+                        <b>${s.nome}</b><br>+ R$ ${parseFloat(s.preco).toFixed(2)}
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('secao-upsell').style.display = 'none';
+            }
+
+            const containerExtras = document.getElementById('lista-extras-disponiveis');
+            const grupoExtras = document.getElementById('grupo-extras');
+            containerExtras.innerHTML = '';
+            
+            if (prod.adicionais && prod.adicionais.trim() !== "") {
+                grupoExtras.style.display = 'block';
+                prod.adicionais.split(',').forEach(ad => {
+                    const partes = ad.split(':');
+                    if (partes.length === 2) {
+                        const nome = partes[0].trim();
+                        const preco = parseFloat(partes[1].trim());
+                        containerExtras.innerHTML += `
+                            <label class="extra-item" style="display: flex; justify-content: space-between; margin-bottom: 8px; cursor: pointer;">
+                                <span><input type="checkbox" data-nome="${nome}" data-preco="${preco}" onchange="atualizarPrecoModal()"> ${nome}</span>
+                                <b>+ R$ ${preco.toFixed(2)}</b>
+                            </label>`;
+                    }
+                });
+            } else {
+                grupoExtras.style.display = 'none';
+            }
+
+            document.getElementById('modal-detalhes-produto').style.display = 'flex';
+            document.getElementById('btn-confirmar-adicao').onclick = confirmarAdicao;
+        }
+
+        window.adicionarUpsellRapido = function(prod) {
+            carrinho.push({ nome: prod.nome, preco: parseFloat(prod.preco), quantidade: 1 });
+            salvarCarrinho();
+            atualizarTotalBarra();
+            showToast(`${prod.nome} adicionado ao pedido!`);
+        };
+
+        function atualizarPrecoModal() {
+            let extraTotal = 0;
+            document.querySelectorAll('#lista-extras-disponiveis input:checked').forEach(i => extraTotal += parseFloat(i.dataset.preco));
+            document.getElementById('total-detalhe').innerText = (parseFloat(produtoSelecionadoTemp.preco) + extraTotal).toFixed(2);
+        }
+
+        function confirmarAdicao() {
+            const extras = [];
+            let precoFinal = parseFloat(produtoSelecionadoTemp.preco);
+            document.querySelectorAll('#lista-extras-disponiveis input:checked').forEach(i => {
+                extras.push({ nome: i.dataset.nome, preco: parseFloat(i.dataset.preco) });
+                precoFinal += parseFloat(i.dataset.preco);
+            });
+
+            const obs = document.getElementById('custom-obs').value;
+            carrinho.push({ 
+                nome: produtoSelecionadoTemp.nome, 
+                preco: precoFinal, 
+                quantidade: 1, 
+                adicionais: extras,
+                obs: obs 
+            });
+
+            salvarCarrinho();
+            atualizarTotalBarra();
+            showToast(`${produtoSelecionadoTemp.nome} adicionado!`);
+            document.getElementById('modal-detalhes-produto').style.display = 'none';
+            
+            // Efeito de pulso no carrinho
+            const footer = document.querySelector('.cart-footer');
+            footer.classList.remove('cart-pulse');
+            void footer.offsetWidth; // Truque para resetar animação CSS
+            footer.classList.add('cart-pulse');
+        }
+
+        function compartilharProduto(nome) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('produto', nome);
+            const link = url.toString();
+
+            if (navigator.share) {
+                navigator.share({
+                    title: nome,
+                    text: `Confira este item no cardápio de hoje: ${nome}`,
+                    url: link
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(link);
+                showToast("Link do produto copiado!");
+            }
+        }
+
+        function filtrarPorBusca() {
+            const termo = document.getElementById('inputBusca').value;
+            const btnAtivo = document.querySelector('.filter-btn.active');
+            carregarCardapio(btnAtivo ? btnAtivo.dataset.filter : 'Todos', termo);
+        }
+
+        function socialProofLoop() {
+            const nomes = ["Ana", "Carlos", "Beatriz", "Marcos", "Julia", "Ricardo"];
+            const acoes = ["acabou de pedir um Lanche", "ganhou frete grátis!", "pediu uma Pizza agora"];
+            
+            setInterval(() => {
+                if(Math.random() > 0.7) {
+                    const msg = `${nomes[Math.floor(Math.random()*nomes.length)]} ${acoes[Math.floor(Math.random()*acoes.length)]}`;
+                    const div = document.createElement('div');
+                    div.className = 'social-proof';
+                    div.innerHTML = `<span>🛒</span> ${msg}`;
+                    document.body.appendChild(div);
+                    setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 500); }, 4000);
+                }
+            }, 15000);
+        }
+
+        function atualizarTotalBarra() {
+            const toggle = document.getElementById('tipo-pedido-toggle');
+            const tipoPedido = toggle && toggle.checked ? 'Entrega' : 'Retirada';
+            const freteGratisMinimo = FRETE_GRATIS_VALOR;
+            const subtotal = carrinho.reduce((sum, item) => sum + (item.preco * (item.quantidade || 1)), 0);
+            
+            // Atualiza o contador de itens na sacola
+            const totalItens = carrinho.reduce((sum, item) => sum + (item.quantidade || 1), 0);
+            const cartCountEl = document.getElementById('cart-count');
+            cartCountEl.innerText = totalItens;
+            cartCountEl.style.display = totalItens > 0 ? 'flex' : 'none';
+            
+            let taxa = (tipoPedido === 'Entrega' && subtotal > 0) ? TAXA_ENTREGA : 0;
+            
+            // Lógica da Barra de Frete Grátis
+            const infoFrete = document.getElementById('frete-info');
+            const progCont = document.getElementById('frete-progress-cont');
+            const progBar = document.getElementById('frete-progress-bar');
+
+            if (freteGratisMinimo > 0 && subtotal > 0 && subtotal < freteGratisMinimo && tipoPedido === 'Entrega') {
+                const faltam = freteGratisMinimo - subtotal;
+                infoFrete.innerText = `Faltam R$ ${faltam.toFixed(2)} para Frete Grátis!`;
+                progCont.style.display = 'block';
+                progBar.style.width = `${(subtotal / freteGratisMinimo) * 100}%`;
+            } else if (freteGratisMinimo > 0 && subtotal >= freteGratisMinimo && tipoPedido === 'Entrega') {
+                infoFrete.innerText = `🎉 Você ganhou Frete Grátis!`;
+                progBar.style.width = `100%`;
+                taxa = 0;
+            } else {
+                infoFrete.innerText = subtotal > 0 ? "Seu Pedido" : "Carrinho Vazio";
+                progCont.style.display = 'none';
+            }
+            
+            if (freteGratisMinimo > 0 && subtotal >= freteGratisMinimo) taxa = 0;
+            
+            let totalFinal = subtotal > 0 ? subtotal + taxa - descontoCupom : 0;
+            if (totalFinal < 0) totalFinal = 0;
+
+            document.getElementById('total-valor').innerText = totalFinal.toFixed(2);
+        }
+
+        function alterarQuantidade(index, delta) {
+            carrinho[index].quantidade += delta;
+            if (carrinho[index].quantidade <= 0) {
+                removerDoCarrinho(index);
+            } else {
+                salvarCarrinho();
+                atualizarTotalBarra();
+                // Se estiver no passo 4 (revisão), atualiza a lista visualmente
+                if (currentStep === 4) renderResumoFinal();
+            }
+        }
+
+        function removerDoCarrinho(index) {
+            carrinho.splice(index, 1);
+            salvarCarrinho();
+            atualizarTotalBarra();
+            if (carrinho.length === 0) {
+                fecharModal();
+            } else {
+                abrirResumo(); // Atualiza a lista no modal
+            }
+        }
+
+        function fecharModal() {
+            document.getElementById('modal-carrinho').style.display = 'none';
+        }
+
+        function finalizarPedido() {
+            const nome = document.getElementById('nome-cliente').value;
+            const telefone = document.getElementById('telefone-cliente').value;
+            const endereco = document.getElementById('endereco-entrega').value;
+            const pagamento = document.getElementById('forma-pagamento').value;
+            const trocoPara = document.getElementById('troco-para').value;
+            const toggle = document.getElementById('tipo-pedido-toggle');
+            const tipoPedido = toggle && toggle.checked ? 'Entrega' : 'Retirada';
+            const observacoes = document.getElementById('observacoes').value;
+
+            if (!isLojaAberta()) {
+                showToast("A loja está fechada no momento!", "error");
+                return;
+            }
+
+            if (!nome || !telefone || !pagamento) {
+                showToast("Por favor, preencha Nome, Telefone e Pagamento.", "error");
+                return;
+            }
+            if (tipoPedido === 'Entrega' && !endereco) {
+                showToast("Por favor, informe o endereço de entrega.", "error");
+                return;
+            }
+
+            const subtotalAtual = carrinho.reduce((sum, item) => sum + (item.preco * (item.quantidade || 1)), 0);
+            if (PEDIDO_MINIMO > 0 && subtotalAtual < PEDIDO_MINIMO) {
+                showToast(`O pedido mínimo é de R$ ${PEDIDO_MINIMO.toFixed(2)}.`, "error");
+                return;
+            }
+
+            // Salvar dados no localStorage para a próxima vez
+            localStorage.setItem('cliente_nome', nome);
+            localStorage.setItem('cliente_telefone', telefone);
+            localStorage.setItem('cliente_endereco', endereco); // Salva mesmo se for retirada, para preencher na próxima entrega
+            localStorage.setItem('cliente_pagamento', pagamento);
+            localStorage.setItem('cliente_tipo_pedido', tipoPedido);
+
+            // Calcular total
+            const subtotal = carrinho.reduce((sum, item) => sum + (item.preco * (item.quantidade || 1)), 0);
+            const freteGratisMinimo = FRETE_GRATIS_VALOR;
+            let taxaAplicada = (tipoPedido === 'Entrega') ? TAXA_ENTREGA : 0;
+            
+            if (freteGratisMinimo > 0 && subtotal >= freteGratisMinimo) taxaAplicada = 0;
+
+            let totalFinal = subtotal + taxaAplicada - descontoCupom;
+            if (totalFinal < 0) totalFinal = 0;
+
+            // Formatar lista de itens para o WhatsApp
+            const itensTexto = carrinho.map(item => {
+                let texto = `- ${item.quantidade || 1}x ${item.nome}`;
+                if (item.adicionais && item.adicionais.length > 0) {
+                    texto += ` (Adicionais: ${item.adicionais.map(a => a.nome).join(', ')})`;
+                }
+                if (item.obs) texto += ` [Obs: ${item.obs}]`;
+                return texto + ` (R$ ${(item.preco * item.quantidade).toFixed(2)})`;
+            }).join('%0A');
+
+            // Lógica para incluir troco na mensagem se for dinheiro
+            let infoPagamento = `*Pagamento:* ${pagamento}`;
+            if (pagamento === 'Dinheiro' && trocoPara) {
+                infoPagamento += `%0A*Troco para:* R$ ${parseFloat(trocoPara).toFixed(2)}`;
+            }
+
+            const tempoEstimadoMsg = configLoja.tempo_entrega ? `%0A*Tempo Estimado:* ${configLoja.tempo_entrega} min` : '';
+
+            // Construir a mensagem (usando %0A para quebras de linha e * para negrito no WhatsApp)
+            const mensagem = `*Novo Pedido - Meu Restaurante*%0A%0A` +
+                             `*Cliente:* ${nome}%0A` +
+                             `*Telefone:* ${telefone}%0A` +
+                             `*Tipo:* ${tipoPedido}%0A` +
+                             (tipoPedido === 'Entrega' ? `*Endereço:* ${endereco}%0A` : '') +
+                             (observacoes ? `*Observações:* ${observacoes}%0A` : '') +
+                             `${tempoEstimadoMsg}%0A` +
+                             `${infoPagamento}%0A%0A` +
+                             `*Itens:*%0A${itensTexto}%0A%0A` +
+                             `*Subtotal:* R$ ${subtotal.toFixed(2)}%0A` +
+                             (tipoPedido === 'Entrega' ? `*Taxa de Entrega:* R$ ${TAXA_ENTREGA.toFixed(2)}%0A` : '') +
+                             (descontoCupom > 0 ? `*Desconto:* - R$ ${descontoCupom.toFixed(2)}%0A` : '') +
+                             `*Total Final: R$ ${totalFinal.toFixed(2)}*`;
+
+            // Validação final para o WhatsApp
+            if (!WHATSAPP_RESTAURANTE) {
+                showToast("Erro: WhatsApp não configurado.", "error");
+                return;
+            }
+            // Criar link do WhatsApp e abrir em nova aba
+            const linkWhatsapp = `https://wa.me/${WHATSAPP_RESTAURANTE}?text=${mensagem}`;
+            window.open(linkWhatsapp, '_blank');
+
+            // Decrementar Estoque
+            const produtosGerais = JSON.parse(localStorage.getItem('meus_produtos')) || [];
+            carrinho.forEach(itemCart => {
+                const pIdx = produtosGerais.findIndex(pg => pg.nome === itemCart.nome);
+                if (pIdx !== -1 && produtosGerais[pIdx].estoque) {
+                    produtosGerais[pIdx].estoque = Math.max(0, parseInt(produtosGerais[pIdx].estoque) - itemCart.quantidade);
+                }
+            });
+            localStorage.setItem('meus_produtos', JSON.stringify(produtosGerais));
+
+            // Salvar no histórico de vendas (Relatório Admin)
+            const historico = JSON.parse(localStorage.getItem('historico_vendas')) || [];
+            historico.push({
+                id: Date.now(),
+                data: new Date().toLocaleString('pt-BR'),
+                cliente: nome,
+                total: totalFinal,
+                restauranteOwner: restauranteAtual,
+                itens: carrinho.map(item => `${item.quantidade}x ${item.nome}`)
+            });
+            localStorage.setItem('historico_vendas', JSON.stringify(historico));
+
+            // Sistema de Fidelidade por Loja
+            let pontosAtuais = parseFloat(localStorage.getItem(`pontos_${restauranteAtual}`)) || 0;
+            localStorage.setItem(`pontos_${restauranteAtual}`, pontosAtuais + totalFinal);
+            atualizarPontosUI();
+
+            // Salvar no histórico para permitir repetir o pedido
+            localStorage.setItem('ultimo_pedido', JSON.stringify(carrinho));
+
+            // Limpar os campos e o carrinho após o pedido
+            carrinho = [];
+            salvarCarrinho();
+            descontoCupom = 0;
+            document.getElementById('nome-cliente').value = '';
+            document.getElementById('telefone-cliente').value = '';
+            document.getElementById('endereco-entrega').value = '';
+            document.getElementById('troco-para').value = '';
+            document.getElementById('tipo-pedido-toggle').checked = true; // Reseta para Entrega
+            document.getElementById('cupom-input').value = '';
+            document.getElementById('observacoes').value = '';
+            fecharModal();
+            atualizarTotalBarra();
+            verificarUltimoPedido();
+            
+            // Mostrar Modal Sucesso ou PIX
+            const chavePix = configLoja.pix;
+            if (pagamento === 'Pix' && chavePix) {
+                document.getElementById('chave-pix-valor').innerText = chavePix;
+                document.getElementById('modal-pix').style.display = 'flex';
+            } else {
+                openModal('modal-success');
+            }
+        }
+
+        function cadastrarVIP() {
+            const nome = document.getElementById('vip-nome').value;
+            const whatsapp = document.getElementById('vip-whatsapp').value;
+            if(!nome || !whatsapp) return showToast("Preencha seus dados!", "error");
+            
+            let leads = JSON.parse(localStorage.getItem(`leads_${restauranteAtual}`)) || [];
+            if(leads.find(l => l.whatsapp === whatsapp)) {
+                showToast("Você já está na nossa lista VIP!");
+            } else {
+                leads.push({ nome, whatsapp, data: new Date().toLocaleDateString() });
+                localStorage.setItem(`leads_${restauranteAtual}`, JSON.stringify(leads));
+                showToast("Bem-vindo à lista VIP!");
+            }
+            closeModal('modal-vip');
+        }
+
+        function iniciarContagemRegressiva() {
+            setInterval(() => {
+                document.querySelectorAll('.countdown-timer').forEach(el => {
+                    const expireDate = new Date(el.dataset.expire).getTime();
+                    const now = new Date().getTime();
+                    const distance = expireDate - now;
+
+                    if (distance < 0) {
+                        el.parentElement.innerHTML = "🔥 Oferta Encerrada";
+                        return;
+                    }
+
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    el.innerText = `Termina em: ${hours}h ${minutes}m ${seconds}s`;
+                });
+            }, 1000);
+        }
+
+        window.compartilharLoja = function() {
+            const link = window.location.href;
+            const msg = `Ei! Olha esse cardápio da *${restauranteAtual.toUpperCase()}*. Muita coisa gostosa, dá uma olhadinha: ${link}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+
+        function copiarPix() {
+            const chave = document.getElementById('chave-pix-valor').innerText;
+            navigator.clipboard.writeText(chave).then(() => {
+                showToast("Chave PIX copiada com sucesso!");
+            });
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', target);
+            localStorage.setItem('theme', target);
+        }
+
+        function atualizarPontosUI() {
+            const pontos = parseFloat(localStorage.getItem(`pontos_${restauranteAtual}`)) || 0;
+            const div = document.getElementById('pontos-fidelidade');
+            if (pontos > 0) {
+                div.innerText = `⭐ ${Math.floor(pontos)} Pontos Fidelidade`;
+                div.style.display = 'inline-flex';
+            } else {
+                div.style.display = 'none';
+            }
+        }
+
+        // Carregar tema salvo
+        if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+
+        function verificarUltimoPedido() {
+            const ultimo = JSON.parse(localStorage.getItem('ultimo_pedido'));
+            const container = document.getElementById('ultimo-pedido-container');
+            if (ultimo && ultimo.length > 0) {
+                const nomes = ultimo.map(item => `${item.quantidade || 1}x ${item.nome}`).join(', ');
+                document.getElementById('detalhes-ultimo-pedido').innerText = nomes;
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        function repetirUltimoPedido() {
+            const ultimo = JSON.parse(localStorage.getItem('ultimo_pedido'));
+            if (ultimo) {
+                carrinho = ultimo;
+                salvarCarrinho();
+                atualizarTotalBarra();
+                showToast("Último pedido carregado no carrinho!");
+            }
+        }
+
+        function atualizarStatusLoja() {
+            const statusDiv = document.getElementById('status-loja');
+            const fechadaManualmente = configLoja.fechada_manualmente;
+
+            if (fechadaManualmente) {
+                statusDiv.innerHTML = `<span class="status-badge closed">● Fechado Manualmente</span>`;
+            } else if (isLojaAberta()) {
+                statusDiv.innerHTML = `<span class="status-badge open">● Aberto agora</span>`;
+            } else {
+                statusDiv.innerHTML = `<span class="status-badge closed">● Fechado (${HORA_ABERTURA}h às ${HORA_FECHAMENTO}h)</span>`;
+            }
+        }
+
+        // Máscara de Telefone Automática
+        document.getElementById('telefone-cliente').addEventListener('input', (e) => {
+            let value = e.target.value;
+            value = value.replace(/\D/g, ""); // Remove tudo o que não é dígito
+            value = value.replace(/^(\d{2})(\d)/g, "($1) $2"); // Coloca parênteses e espaço
+            value = value.replace(/(\d)(\d{4})$/, "$1-$2"); // Coloca o hífen antes dos últimos 4 dígitos
+            e.target.value = value;
+        });
+
+        // Mostrar/Ocultar campo de troco conforme a forma de pagamento
+        document.getElementById('forma-pagamento').addEventListener('change', (e) => {
+            const campoTroco = document.getElementById('campo-troco');
+            if (e.target.value === 'Dinheiro') {
+                campoTroco.classList.remove('hidden');
+            } else {
+                campoTroco.classList.add('hidden');
+                document.getElementById('troco-para').value = ''; // Limpa o valor se mudar de ideia
+            }
+        });
+
+        // Mostrar/Ocultar campo de endereço e atualizar taxa de entrega
+        function toggleEnderecoField() {
+            const toggle = document.getElementById('tipo-pedido-toggle');
+            const tipoPedido = toggle && toggle.checked ? 'Entrega' : 'Retirada';
+            const divEndereco = document.getElementById('div-endereco');
+            const labelEntregaResumo = document.getElementById('label-entrega-resumo');
+
+            if (tipoPedido === 'Entrega') {
+                divEndereco.classList.remove('hidden');
+                labelEntregaResumo.classList.remove('hidden');
+            } else {
+                divEndereco.classList.add('hidden');
+                labelEntregaResumo.classList.add('hidden');
+            }
+            atualizarTotalBarra(); 
+            // Apenas atualizamos os valores se o modal já estiver aberto
+            if(document.getElementById('modal-carrinho').style.display === 'flex') {
+                const subtotal = carrinho.reduce((sum, item) => sum + (item.preco * item.quantidade), 0);
+                const taxaAtual = (tipoPedido === 'Entrega') ? TAXA_ENTREGA : 0;
+                document.getElementById('modal-total').innerText = (subtotal + taxaAtual).toFixed(2);
+            }
+        }
+
+        // Event listener para o tipo de pedido
+        document.getElementById('tipo-pedido-toggle').addEventListener('change', toggleEnderecoField);
+
+        function filtrar(cat, event) {
+            const termo = document.getElementById('inputBusca').value;
+            // Remove a classe 'active' de todos os botões de filtro
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Centraliza o botão clicado na rolagem horizontal
+            if (event && event.currentTarget) {
+                event.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+            
+            carregarCardapio(cat, termo);
+        }
+
+        function carregarBanners() {
+            const listaBanners = configLoja.banners || [];
+            const container = document.getElementById('banner-carousel');
+            if (listaBanners.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.innerHTML = listaBanners.map(url => `
+                <div class="banner-item" style="background-image: url('${url.trim()}')"></div>
+            `).join('');
+            container.style.display = 'flex';
+        }
+
+        function verificarLinkDireto() {
+            const params = new URLSearchParams(window.location.search);
+            const produtoDesejado = params.get('produto');
+            if (produtoDesejado) {
+                document.getElementById('inputBusca').value = produtoDesejado;
+                filtrarPorBusca();
+            }
+        }
+
+        atualizarStatusLoja();
+        // Atualiza a barra se houver itens persistidos
+        atualizarTotalBarra(); 
+        carregarCuponsLoja();
+        carregarCardapio();
+        carregarBanners();
+        verificarUltimoPedido();
+        atualizarPontosUI();
+        verificarLinkDireto();
+        iniciarContagemRegressiva();
+        iniciarSplashScreen();
+        verificarCupomURL();
+        gerarLinkExibicao();
+        socialProofLoop();
+        setTimeout(verificarCarrinhoAbandonado, 5000);
+    </script>
+</body>
+</html>
