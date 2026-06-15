@@ -178,7 +178,7 @@
     <!-- Modal de Resumo -->
     <div id="modal-carrinho" class="modal">
         <div class="modal-content">
-            <button onclick="fecharModal()" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
+            <button onclick="closeModal('modal-carrinho')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
             <div class="step-progress-container">
                 <div class="step-dot active" data-step="1">1</div>
                 <div class="step-dot" data-step="2">2</div>
@@ -214,7 +214,7 @@
                 </div>
 
                 <div class="step-nav-buttons">
-                    <button onclick="fecharModal()" class="btn-edit" style="background:#64748b; flex:1">Sair</button>
+                    <button onclick="closeModal('modal-carrinho')" class="btn-edit" style="background:#64748b; flex:1">Sair</button>
                     <button onclick="changeStep(2)" class="btn-add" style="flex:2">Avançar →</button>
                 </div>
             </div>
@@ -416,9 +416,14 @@
             
             container.innerHTML = items.map(p => {
                 const noCarrinho = carrinho.some(item => item.nome === p.nome);
+                const iconName = (window.iconMap && window.iconMap[p.categoria]) || 'package';
+                const imageHTML = p.imagem
+                    ? `<img src="${p.imagem}">`
+                    : `<div class="card-image-placeholder" style="width:55px; height:55px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:#f8fafc;"><i data-lucide="${iconName}" style="width:24px; height:24px;"></i></div>`;
+
                 return `
                     <div class="selection-card ${noCarrinho ? 'selected' : ''}" onclick="toggleSelectionItem(this, ${JSON.stringify(p).replace(/"/g, '&quot;')})">
-                        <img src="${p.imagem || 'https://via.placeholder.com/50x50'}">
+                        ${imageHTML}
                         <div class="selection-card-info">
                             <b>${p.nome}</b>
                             <span>+ R$ ${parseFloat(p.preco).toFixed(2)}</span>
@@ -427,6 +432,7 @@
                     </div>
                 `;
             }).join('');
+            if (window.lucide) lucide.createIcons();
         }
 
         function toggleSelectionItem(el, prod) {
@@ -651,7 +657,7 @@
                 let items = categorias[cat];
 
                 // Filtro de busca
-                if (termoBusca) {
+            if (termoBusca && items) {
                     items = items.filter(p => p.nome.toLowerCase().includes(termoBusca.toLowerCase()));
                 }
 
@@ -977,7 +983,7 @@
             salvarCarrinho();
             atualizarTotalBarra();
             if (carrinho.length === 0) {
-                fecharModal();
+                closeModal('modal-carrinho');
             } else {
                 abrirResumo(); // Atualiza a lista no modal
             }
@@ -1117,7 +1123,7 @@
             document.getElementById('tipo-pedido-toggle').checked = true; // Reseta para Entrega
             document.getElementById('cupom-input').value = '';
             document.getElementById('observacoes').value = '';
-            fecharModal();
+            closeModal('modal-carrinho');
             atualizarTotalBarra();
             verificarUltimoPedido();
             

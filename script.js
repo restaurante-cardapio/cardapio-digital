@@ -209,7 +209,7 @@ if (document.readyState === 'loading') {
     inicializarSistema();
 }
 
-const iconMap = {
+window.iconMap = {
     'Lanches': 'sandwich',
     'Pizzas': 'pizza',
     'Acompanhamentos': 'utensils',
@@ -329,7 +329,7 @@ function atualizarListaAdmin() {
     listaAdmin.innerHTML = '';
 
     meusProdutos.forEach((prod) => {
-        const iconName = iconMap[prod.categoria] || 'package';
+        const iconName = window.iconMap[prod.categoria] || 'package';
         const imageContent = prod.imagem 
             ? `<img src="${prod.imagem}" style="width:100%; height:180px; object-fit:cover; border-radius:8px;">`
             : `<div class="card-image-placeholder" style="height:180px; border-radius:8px;">
