@@ -133,30 +133,122 @@
     <div id="modal-auth" class="modal">
         <div class="modal-content">
             <button onclick="closeModal('modal-auth')" class="btn-close-modal"><i data-lucide="x"></i></button>
-            <h2 id="auth-modal-title">Acesse sua conta</h2>
+            <h2 id="auth-modal-title" style="margin-bottom: 20px;">Acesse sua conta</h2>
             
             <div class="auth-mode-switch">
                 <button id="btn-mode-login" class="auth-mode-btn active" onclick="setAuthMode('login')">Login</button>
                 <button id="btn-mode-register" class="auth-mode-btn" onclick="setAuthMode('register')">Cadastrar</button>
             </div>
 
-            <form id="form-auth-dynamic" onsubmit="processarAuth(event)">
-                <div class="form-group">
-                    <label>Usuário</label>
-                    <input type="text" id="auth-user" required placeholder="Nome de usuário">
+            <form id="form-auth-dynamic" onsubmit="window.processarAuth(event)">
+                <!-- LOGIN FIELDS -->
+                <div id="auth-login-fields">
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" id="auth-user" placeholder="seu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="auth-pass" placeholder="••••">
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('auth-pass')">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p style="text-align: right; margin-bottom: 15px;"><a href="#" onclick="window.esqueciSenha()" style="font-size: 0.8rem; color: var(--text-muted); text-decoration: none;">Esqueci minha senha</a></p>
+                    <button type="submit" id="btn-auth-submit" class="btn-add" style="width: 100%; margin-top: 10px;">Entrar</button>
                 </div>
-                <div class="form-group">
-                    <label>Senha</label>
-                    <input type="password" id="auth-pass" required placeholder="••••">
+
+                <!-- REGISTER WIZARD -->
+                <div id="auth-register-steps" style="display: none;">
+                    <div class="step-progress-container" style="margin-bottom: 25px;">
+                        <div class="step-dot auth-step-dot active" data-auth-step="1">1</div>
+                        <div class="step-dot auth-step-dot" data-auth-step="2">2</div>
+                        <div class="step-dot auth-step-dot" data-auth-step="3">3</div>
+                        <div class="step-dot auth-step-dot restaurante-only-dot" data-auth-step="4">4</div>
+                    </div>
+
+                    <!-- Passo 1: Perfil -->
+                    <div class="auth-step active" id="auth-step-1">
+                        <div class="form-group">
+                            <label>Qual seu perfil?</label>
+                            <div class="role-selector">
+                                <div class="role-option active" data-role="comprador" onclick="updateRoleSelection('comprador')">🛍️ Cliente</div>
+                                <div class="role-option" data-role="restaurante" onclick="updateRoleSelection('restaurante')">👨‍🍳 Restaurante</div>
+                            </div>
+                            <input type="hidden" id="auth-role" value="comprador">
+                        </div>
+                        <button type="button" onclick="window.changeRegisterStep(2)" class="btn-add" style="width:100%">Continuar →</button>
+                    </div>
+
+                    <!-- Passo 2: Dados Básicos -->
+                    <div class="auth-step" id="auth-step-2">
+                        <div class="form-group">
+                            <label>Nome Completo ou Nome da Loja</label>
+                            <input type="text" id="auth-name" placeholder="Ex: João Silva ou Pizzaria 10">
+                        </div>
+                        <div class="form-group">
+                            <label>E-mail</label>
+                            <input type="email" id="auth-user-reg" placeholder="seu@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Crie uma Senha</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="auth-pass-reg" placeholder="••••">
+                                <button type="button" class="toggle-password" onclick="togglePasswordVisibility('auth-pass-reg')">
+                                    <i data-lucide="eye"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength-container" id="strength-meter">
+                                <div class="password-strength-bar"><div class="password-strength-progress" id="strength-bar"></div></div>
+                                <span class="password-strength-text" id="strength-text"></span>
+                            </div>
+                        </div>
+                        <div class="step-nav-buttons">
+                            <button type="button" onclick="window.changeRegisterStep(1)" class="btn-edit" style="background:#64748b; flex:1">Voltar</button>
+                            <button type="button" onclick="window.changeRegisterStep(3)" class="btn-add" style="flex:2">Próximo</button>
+                        </div>
+                    </div>
+
+                    <!-- Passo 3: Contato -->
+                    <div class="auth-step" id="auth-step-3">
+                        <div class="form-group">
+                            <label>WhatsApp (com DDD)</label>
+                            <input type="tel" id="auth-phone" placeholder="(00) 00000-0000">
+                        </div>
+                        <div class="step-nav-buttons">
+                            <button type="button" onclick="window.changeRegisterStep(2)" class="btn-edit" style="background:#64748b; flex:1">Voltar</button>
+                            <button type="button" id="btn-next-to-4" onclick="window.changeRegisterStep(4)" class="btn-add" style="flex:2">Próximo</button>
+                            <button type="submit" id="btn-finish-3" class="btn-add" style="flex:2; display:none; margin-top:0">Finalizar</button>
+                        </div>
+                    </div>
+
+                    <!-- Passo 4: Detalhes Loja -->
+                    <div class="auth-step" id="auth-step-4">
+                        <div class="form-group">
+                            <label>Horário (Abertura e Fechamento)</label>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="number" id="auth-open" placeholder="18" style="flex:1">
+                                <span>às</span>
+                                <input type="number" id="auth-close" placeholder="23" style="flex:1">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Foto ou Logo da Loja</label>
+                            <input type="file" id="auth-logo" accept="image/*" onchange="window.handleRegisterImagePreview(this)">
+                            <div id="auth-logo-preview-container" class="image-preview-container">
+                                <img id="auth-logo-preview-img" src="" alt="Prévia da Logo">
+                                <button type="button" class="btn-remove-preview" onclick="window.limparRegisterPreview()" title="Remover imagem"><i data-lucide="trash-2" style="width: 16px;"></i></button>
+                            </div>
+                        </div>
+                        <div class="step-nav-buttons">
+                            <button type="button" onclick="window.changeRegisterStep(3)" class="btn-edit" style="background:#64748b; flex:1">Voltar</button>
+                            <button type="submit" class="btn-add" style="flex:2; margin-top:0">Cadastrar</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group" id="group-role" style="display: none;">
-                    <label>Tipo de Conta</label>
-                    <select id="auth-role">
-                        <option value="comprador">🛍️ Comprador</option>
-                        <option value="restaurante">👨‍🍳 Restaurante</option>
-                    </select>
-                </div>
-                <button type="submit" id="btn-auth-submit" class="btn-add" style="width: 100%; margin-top: 10px;">Entrar</button>
+
                 <div id="btn-logout-area" style="display: none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
                     <button type="button" onclick="logout()" class="btn-danger" style="width: 100%; margin:0;">Sair da Conta</button>
                 </div>
@@ -191,14 +283,11 @@
                 <h2 style="text-align: left; font-size: 1.6rem; margin-bottom: 20px;">Identificação</h2>
                 
                 <div class="checkout-section-title">📍 Como deseja receber?</div>
-                <div class="switch-container">
-                    <span class="switch-label">Retirada</span>
-                    <label class="switch">
-                        <input type="checkbox" id="tipo-pedido-toggle" checked onchange="toggleEnderecoField()">
-                        <span class="slider round"></span>
-                    </label>
-                    <span class="switch-label">Entrega</span>
+                <div class="role-selector" style="margin-bottom: 20px;">
+                    <div class="role-option active order-type-option" data-type="Entrega" onclick="updateOrderTypeSelection('Entrega')">🛵 Entrega</div>
+                    <div class="role-option order-type-option" data-type="Retirada" onclick="updateOrderTypeSelection('Retirada')">🥡 Retirada</div>
                 </div>
+                <input type="hidden" id="tipo-pedido-toggle-hidden" value="Entrega">
 
                 <div class="form-group">
                     <label>Seu Nome</label>
@@ -211,8 +300,26 @@
                 <div class="form-group" id="div-endereco">
                     <label>Endereço de Entrega</label>
                     <input type="text" id="endereco-entrega" placeholder="Rua, número, bairro">
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label>CEP</label>
+                            <input type="text" id="cep-cliente" placeholder="00000-000">
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label>Número</label>
+                            <input type="text" id="numero-cliente" placeholder="123">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px; margin-bottom: 0;">
+                        <label>Rua</label>
+                        <input type="text" id="rua-cliente" placeholder="Nome da Rua" readonly>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;"><label>Bairro</label><input type="text" id="bairro-cliente" placeholder="Bairro" readonly></div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;"><label>Cidade</label><input type="text" id="cidade-cliente" placeholder="Cidade" readonly></div>
+                        <div class="form-group" style="flex: 0.5; margin-bottom: 0;"><label>UF</label><input type="text" id="estado-cliente" placeholder="UF" maxlength="2" readonly></div>
+                    </div>
                 </div>
-
                 <div class="step-nav-buttons">
                     <button onclick="closeModal('modal-carrinho')" class="btn-edit" style="background:#64748b; flex:1">Sair</button>
                     <button onclick="changeStep(2)" class="btn-add" style="flex:2">Avançar →</button>
@@ -435,6 +542,10 @@
                 if (document.getElementById('tipo-pedido-toggle').checked && !document.getElementById('endereco-entrega').value) {
                     return showToast("Informe o endereço de entrega!", "error");
                 }
+                const cep = document.getElementById('cep-cliente').value.replace(/\D/g, '');
+                if (document.getElementById('tipo-pedido-toggle').checked && (!cep || cep.length !== 8)) {
+                    return showToast("Informe um CEP válido para entrega!", "error");
+                }
             }
 
             currentStep = step;
@@ -561,6 +672,10 @@
             document.getElementById('nome-cliente').value = localStorage.getItem('cliente_nome') || '';
             document.getElementById('telefone-cliente').value = localStorage.getItem('cliente_telefone') || '';
             document.getElementById('endereco-entrega').value = localStorage.getItem('cliente_endereco') || '';
+            document.getElementById('cep-cliente').value = localStorage.getItem('cliente_cep') || '';
+            document.getElementById('numero-cliente').value = localStorage.getItem('cliente_numero') || '';
+            document.getElementById('rua-cliente').value = localStorage.getItem('cliente_rua') || '';
+            document.getElementById('bairro-cliente').value = localStorage.getItem('cliente_bairro') || '';
             
             const tipoPedidoSalvo = localStorage.getItem('cliente_tipo_pedido') || 'Entrega';
             document.getElementById('tipo-pedido-toggle').checked = (tipoPedidoSalvo === 'Entrega');
@@ -1048,6 +1163,10 @@
             const nome = document.getElementById('nome-cliente').value;
             const telefone = document.getElementById('telefone-cliente').value;
             const endereco = document.getElementById('endereco-entrega').value;
+            const cep = document.getElementById('cep-cliente').value;
+            const numero = document.getElementById('numero-cliente').value;
+            const rua = document.getElementById('rua-cliente').value;
+            const bairro = document.getElementById('bairro-cliente').value;
             const pagamento = document.getElementById('forma-pagamento').value;
             const trocoPara = document.getElementById('troco-para').value;
             const toggle = document.getElementById('tipo-pedido-toggle');
@@ -1063,8 +1182,12 @@
                 showToast("Por favor, preencha Nome, Telefone e Pagamento.", "error");
                 return;
             }
-            if (tipoPedido === 'Entrega' && !endereco) {
-                showToast("Por favor, informe o endereço de entrega.", "error");
+            if (tipoPedido === 'Entrega' && (!cep || cep.replace(/\D/g, '').length !== 8 || !numero || !rua)) {
+                showToast("Por favor, preencha o CEP, número e rua para entrega.", "error");
+                return;
+            }
+            if (tipoPedido === 'Entrega' && !bairro) {
+                showToast("Por favor, preencha o bairro para entrega.", "error");
                 return;
             }
 
@@ -1077,6 +1200,10 @@
             // Salvar dados no localStorage para a próxima vez
             localStorage.setItem('cliente_nome', nome);
             localStorage.setItem('cliente_telefone', telefone);
+            localStorage.setItem('cliente_cep', cep);
+            localStorage.setItem('cliente_numero', numero);
+            localStorage.setItem('cliente_rua', rua);
+            localStorage.setItem('cliente_bairro', bairro);
             localStorage.setItem('cliente_endereco', endereco); // Salva mesmo se for retirada, para preencher na próxima entrega
             localStorage.setItem('cliente_pagamento', pagamento);
             localStorage.setItem('cliente_tipo_pedido', tipoPedido);
@@ -1114,7 +1241,11 @@
                              `*Cliente:* ${nome}%0A` +
                              `*Telefone:* ${telefone}%0A` +
                              `*Tipo:* ${tipoPedido}%0A` +
-                             (tipoPedido === 'Entrega' ? `*Endereço:* ${endereco}%0A` : '') +
+                             (tipoPedido === 'Entrega' ? 
+                                `*Endereço:* ${rua}, ${numero} - ${bairro} - CEP: ${cep}%0A` +
+                                (endereco ? `*Complemento:* ${endereco}%0A` : '') // 'endereco' agora é complemento
+                                : ''
+                             ) +
                              (observacoes ? `*Observações:* ${observacoes}%0A` : '') +
                              `${tempoEstimadoMsg}%0A` +
                              `${infoPagamento}%0A%0A` +
@@ -1179,6 +1310,10 @@
             carrinho = [];
             salvarCarrinho();
             descontoCupom = 0;
+            document.getElementById('cep-cliente').value = '';
+            document.getElementById('numero-cliente').value = '';
+            document.getElementById('rua-cliente').value = '';
+            document.getElementById('bairro-cliente').value = '';
             document.getElementById('nome-cliente').value = '';
             document.getElementById('telefone-cliente').value = '';
             document.getElementById('endereco-entrega').value = '';
@@ -1299,15 +1434,6 @@
                 statusDiv.innerHTML = `<span class="status-badge closed">● Fechado (${HORA_ABERTURA}h às ${HORA_FECHAMENTO}h)</span>`;
             }
         }
-
-        // Máscara de Telefone Automática
-        document.getElementById('telefone-cliente').addEventListener('input', (e) => {
-            let value = e.target.value;
-            value = value.replace(/\D/g, ""); // Remove tudo o que não é dígito
-            value = value.replace(/^(\d{2})(\d)/g, "($1) $2"); // Coloca parênteses e espaço
-            value = value.replace(/(\d)(\d{4})$/, "$1-$2"); // Coloca o hífen antes dos últimos 4 dígitos
-            e.target.value = value;
-        });
 
         // Mostrar/Ocultar campo de troco conforme a forma de pagamento
         document.getElementById('forma-pagamento').addEventListener('change', (e) => {

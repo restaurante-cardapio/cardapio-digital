@@ -19,6 +19,7 @@ if (typeof firebase !== 'undefined') {
 
 let editId = null; // Agora usamos ID em vez de Index para evitar erros em listas filtradas
 let currentProductStep = 1;
+let currentRegisterStep = 1;
 
 let sessaoAtiva = null;
 try {
@@ -94,8 +95,8 @@ window.atualizarTopoNav = function() {
     const userLogado = sessaoAtiva;
 
     if (userLogado && leftSide) {
-        const userName = userLogado.user ? userLogado.user.split('@')[0] : 'Usuário';
-        leftSide.innerHTML = `<i data-lucide="user-check" style="color:var(--success)"></i> <span>${userName}</span>`;
+        const displayName = userLogado.name || (userLogado.user ? userLogado.user.split('@')[0] : 'Usuário');
+        leftSide.innerHTML = `<i data-lucide="user-check" style="color:var(--success)"></i> <span>${displayName}</span>`;
 
         // Exibe "Meus Pedidos" se estiver logado e NÃO estiver no painel admin
         const isAdminPage = window.location.href.includes('admin-produtos.html');
@@ -148,88 +149,199 @@ window.abrirMeusPedidos = async function() {
 window.abrirModalAuth = function() {
     const modal = document.getElementById('modal-auth');
     const authForm = document.getElementById('form-auth-dynamic');
-    const switchMode = modal.querySelector('.auth-mode-switch');
+    const switchMode = modal ? modal.querySelector('.auth-mode-switch') : null;
     const logoutArea = document.getElementById('btn-logout-area');
     const submitBtn = document.getElementById('btn-auth-submit');
-    const inputs = authForm.querySelectorAll('.form-group');
+    const authModeSwitch = modal ? modal.querySelector('.auth-mode-switch') : null;
     const title = document.getElementById('auth-modal-title');
 
     if (sessaoAtiva) {
+        const displayName = sessaoAtiva.name || (sessaoAtiva.user ? sessaoAtiva.user.split('@')[0] : 'Usuário');
         title.innerHTML = `
             <div style="text-align:center; padding: 10px 0;">
                 <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">Logado como</div>
-                <div style="font-size: 1.4rem; margin-top: 5px; color: var(--text-main); font-weight: 800;">${sessaoAtiva.user}</div>
+                <div style="font-size: 1.2rem; margin-top: 5px; color: var(--text-main); font-weight: 800;">${displayName}</div>
                 <div class="badge ${sessaoAtiva.role === 'restaurante' ? 'available' : 'featured'}" style="margin-top: 10px; display: inline-block;">
                     ${sessaoAtiva.role === 'restaurante' ? '👨‍🍳 Proprietário' : '🛍️ Cliente'}
                 </div>
             </div>`;
         
-        if (switchMode) switchMode.style.display = 'none';
-        inputs.forEach(group => group.style.display = 'none');
-        logoutArea.style.display = 'block';
-        submitBtn.style.display = 'none';
+        if (authModeSwitch) authModeSwitch.style.display = 'none';
+        if (document.getElementById('auth-login-fields')) document.getElementById('auth-login-fields').style.display = 'none';
+        if (document.getElementById('auth-register-steps')) document.getElementById('auth-register-steps').style.display = 'none';
+        if (logoutArea) logoutArea.style.display = 'block';
+        if (submitBtn) submitBtn.style.display = 'none';
         if (modal) modal.classList.add('is-logged-in');
     } else {
         title.innerText = "Acesse sua conta";
         if (switchMode) switchMode.style.display = 'flex';
-        inputs.forEach(group => group.style.display = 'block');
-        logoutArea.style.display = 'none';
-        submitBtn.style.display = 'block';
+        if (logoutArea) logoutArea.style.display = 'none';
+        if (submitBtn) submitBtn.style.display = 'block';
         if (modal) modal.classList.remove('is-logged-in');
         setAuthMode('login');
     }
+    window.limparRegisterPreview(); // Garante que a prévia esteja limpa ao abrir o modal
     
     openModal('modal-auth');
 };
 
 window.setAuthMode = function(mode) {
     currentAuthMode = mode;
-    if (!document.getElementById('btn-mode-login')) return;
-    
-    // Só aplica a lógica visual de troca se não estiver logado
+    const btnLogin = document.getElementById('btn-mode-login');
+    const btnRegister = document.getElementById('btn-mode-register');
+    const loginFields = document.getElementById('auth-login-fields');
+    const registerSteps = document.getElementById('auth-register-steps');
 
-    document.getElementById('btn-mode-login').classList.toggle('active', mode === 'login');
-    document.getElementById('btn-mode-register').classList.toggle('active', mode === 'register');
-    document.getElementById('group-role').style.display = mode === 'register' ? 'block' : 'none';
-    document.getElementById('btn-auth-submit').innerText = mode === 'login' ? 'Entrar' : 'Cadastrar agora';
+    if (!btnLogin || !btnRegister) return;
+    
+    btnLogin.classList.toggle('active', mode === 'login');
+    btnRegister.classList.toggle('active', mode === 'register');
+
+    if (mode === 'login') {
+        if (loginFields) loginFields.style.display = 'block';
+        if (registerSteps) registerSteps.style.display = 'none';
+    } else {
+        if (loginFields) loginFields.style.display = 'none';
+        if (registerSteps) registerSteps.style.display = 'block';
+        window.changeRegisterStep(1);
+        window.limparRegisterPreview(); // Limpa a prévia ao mudar para o modo de registro
+    }
+};
+
+window.updateRoleSelection = function(role) {
+    const input = document.getElementById('auth-role');
+    if (!input) return;
+    input.value = role;
+    
+    document.querySelectorAll('.role-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.role === role);
+    });
+    window.changeRegisterStep(1); // Atualiza visibilidade dos passos seguintes
+};
+
+window.updateOrderTypeSelection = function(type) {
+    const input = document.getElementById('tipo-pedido-toggle-hidden');
+    if (!input) return;
+    input.value = type;
+    
+    document.querySelectorAll('.order-type-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.type === type);
+    });
+    
+    if (typeof window.toggleEnderecoField === 'function') window.toggleEnderecoField();
+};
+
+window.changeRegisterStep = function(step) {
+    // Validação para impedir o avanço sem preencher os campos obrigatórios
+    if (step > currentRegisterStep) {
+        if (currentRegisterStep === 2) {
+            const name = document.getElementById('auth-name').value.trim();
+            const email = document.getElementById('auth-user-reg').value.trim();
+            const pass = document.getElementById('auth-pass-reg').value.trim();
+
+            if (!name || !email || !pass) return showToast("Preencha Nome, E-mail e Senha!", "error");
+            if (!email.includes('@')) return showToast("Insira um e-mail válido!", "error");
+            if (pass.length < 6) return showToast("A senha deve ter no mínimo 6 caracteres!", "error");
+        }
+        
+        if (currentRegisterStep === 3) {
+            const phone = document.getElementById('auth-phone').value.trim();
+            if (!phone || phone.length < 14) return showToast("Informe um WhatsApp válido!", "error");
+        }
+    }
+
+    const role = document.getElementById('auth-role').value;
+    
+    // Configura botões do passo 3
+    const btnNextTo4 = document.getElementById('btn-next-to-4');
+    const btnFinish3 = document.getElementById('btn-finish-3');
+    const dot4 = document.querySelector('.restaurante-only-dot');
+
+    if (btnNextTo4 && btnFinish3) {
+        if (role === 'restaurante') {
+            btnNextTo4.style.display = 'block';
+            btnFinish3.style.display = 'none';
+            if (dot4) dot4.style.display = 'flex';
+        } else {
+            btnNextTo4.style.display = 'none';
+            btnFinish3.style.display = 'block';
+            if (dot4) dot4.style.display = 'none';
+        }
+    }
+
+    currentRegisterStep = step;
+    document.querySelectorAll('.auth-step').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(`auth-step-${step}`);
+    if (target) target.classList.add('active');
+    
+    document.querySelectorAll('.auth-step-dot').forEach(dot => {
+        const s = parseInt(dot.dataset.authStep);
+        dot.classList.toggle('active', s === step);
+        dot.classList.toggle('completed', s < step);
+    });
+    if (window.lucide) lucide.createIcons();
 };
 
 window.processarAuth = async function(e) {
     e.preventDefault();
-    const email = document.getElementById('auth-user').value;
-    const pass = document.getElementById('auth-pass').value;
-    const role = document.getElementById('auth-role').value;
-    
-    if (!email.includes('@')) return showToast('Use um e-mail válido!', 'error');
 
-    try {
-        if (currentAuthMode === 'register') {
-            // 1. Criar usuário no Auth
+    if (currentAuthMode === 'login') {
+        const email = document.getElementById('auth-user').value;
+        const pass = document.getElementById('auth-pass').value;
+        if (!email || !pass) return showToast('Preencha email e senha', 'error');
+        
+        try {
+            await auth.signInWithEmailAndPassword(email, pass);
+            showToast('Bem-vindo de volta!');
+        } catch (error) {
+            return showToast(error.message, 'error');
+        }
+    } else {
+        // Modo de Cadastro (Register)
+        const role = document.getElementById('auth-role').value;
+        const email = document.getElementById('auth-user-reg').value;
+        const pass = document.getElementById('auth-pass-reg').value;
+        const name = document.getElementById('auth-name').value;
+        const phone = document.getElementById('auth-phone').value;
+
+        if (!email.includes('@')) return showToast('Use um e-mail válido!', 'error');
+        if (!name || !phone) return showToast('Preencha Nome e Telefone!', 'error');
+
+        try {
+            showToast('Criando sua conta...', 'info');
             const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
             const user = userCredential.user;
             
-            // 2. Salvar o Role no Firestore
             await db.collection('usuarios').doc(user.uid).set({
                 user: email,
                 role: role,
+                name: name,
+                phone: phone,
                 createdAt: new Date()
             });
-            
+
+            if (role === 'restaurante') {
+                const open = document.getElementById('auth-open').value || "18";
+                const close = document.getElementById('auth-close').value || "23";
+                const logoFile = document.getElementById('auth-logo').files[0];
+                let logoUrl = logoFile ? await uploadParaStorage(logoFile, 'loja') : "";
+
+                await db.collection('configuracoes').doc(email).set({
+                    nome_exibicao: name,
+                    whatsapp: phone.replace(/\D/g, ""),
+                    abertura: open,
+                    fechamento: close,
+                    logo: logoUrl
+                }, { merge: true });
+            }
             showToast('Conta criada com sucesso!');
-        } else {
-            // Login Simples
-            await auth.signInWithEmailAndPassword(email, pass);
-            showToast('Bem-vindo de volta!');
+            window.limparRegisterPreview(); // Limpa a prévia após o cadastro
+            } catch (error) {
+                let msg = error.code === 'auth/user-not-found' ? 'Usuário não encontrado' : error.message;
+                return showToast(msg, 'error');
+            }
         }
-
-        // O modal será fechado e a UI atualizada automaticamente pelo onAuthStateChanged
-        // O observador onAuthStateChanged cuidará do redirecionamento
-
-    } catch (error) {
-        let msg = error.code === 'auth/user-not-found' ? 'Usuário não encontrado' : error.message;
-        return showToast(msg, 'error');
-    }
-};
+    };
 
 /**
  * Inicialização Robusta
@@ -243,21 +355,163 @@ function inicializarSistema() {
     // Atualização imediata com cache local antes do Firebase responder
     atualizarTopoNav();
 
+    // Máscara de Telefone Centralizada (Cadastro e Checkout)
+    const aplicarMascaraTelefone = (elId) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, ""); // Remove não dígitos
+            if (v.length > 11) v = v.substring(0, 11); // Limita a 11 dígitos
+            v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); // (00) 
+            v = v.replace(/(\d)(\d{4})$/, "$1-$2");    // 00000-0000
+            e.target.value = v;
+        });
+    };
+
+    aplicarMascaraTelefone('auth-phone');        // Telefone no Cadastro
+    aplicarMascaraTelefone('telefone-cliente'); // Telefone no Checkout
+
+    // Validação em Tempo Real
+    const setupRealTimeValidation = () => {
+        const inputs = document.querySelectorAll('#auth-register-steps input, #auth-register-steps select');
+        inputs.forEach(input => {
+            // Adiciona o ícone de check dinamicamente se não existir
+            const group = input.closest('.form-group');
+            if (group && !group.querySelector('.valid-icon')) {
+                const iconSpan = document.createElement('span');
+                iconSpan.className = 'valid-icon';
+                iconSpan.innerHTML = '<i data-lucide="check-circle-2" style="width:18px; height:18px;"></i>';
+                group.appendChild(iconSpan);
+                if (window.lucide) lucide.createIcons();
+            }
+
+            input.addEventListener('input', () => {
+                let isValid = false;
+                const val = input.value.trim();
+
+                if (input.id === 'auth-name') isValid = val.length >= 3;
+                else if (input.id === 'auth-user-reg') isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+                else if (input.id === 'auth-pass-reg') isValid = val.length >= 6;
+                else if (input.id === 'auth-phone') isValid = val.length >= 14;
+                else if (input.tagName === 'SELECT') isValid = val !== "";
+                else if (input.type === 'number') isValid = val !== "" && parseFloat(val) >= 0;
+                else if (input.type === 'file') isValid = input.files.length > 0;
+                else isValid = val.length > 0;
+
+                // Lógica específica para força da senha
+                if (input.id === 'auth-pass-reg') {
+                    const meter = document.getElementById('strength-meter');
+                    const bar = document.getElementById('strength-bar');
+                    const text = document.getElementById('strength-text');
+                    
+                    if (val.length > 0) {
+                        meter.style.display = 'block';
+                        let score = 0;
+                        if (val.length >= 8) score++;
+                        if (/[A-Z]/.test(val)) score++;
+                        if (/[0-9]/.test(val)) score++;
+                        if (/[^A-Za-z0-9]/.test(val)) score++;
+
+                        let width = "33%";
+                        let color = "var(--danger)";
+                        let label = "Fraca";
+
+                        if (score >= 3) {
+                            width = "100%";
+                            color = "var(--success)";
+                            label = "Forte";
+                        } else if (score >= 1) {
+                            width = "66%";
+                            color = "#fbbf24"; // Amarelo/Laranja
+                            label = "Média";
+                        }
+
+                        bar.style.width = width;
+                        bar.style.backgroundColor = color;
+                        text.innerText = label;
+                        text.style.color = color;
+                    } else {
+                        meter.style.display = 'none';
+                    }
+                }
+
+                group.classList.toggle('is-valid', isValid);
+            });
+        });
+    };
+
+window.togglePasswordVisibility = function(inputId) {
+    const input = document.getElementById(inputId);
+    const btn = input.nextElementSibling;
+    if (!btn || !btn.classList.contains('toggle-password')) return;
+    const icon = btn.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+    } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+    }
+    if (window.lucide) lucide.createIcons();
+};
+
+    // Reinicia a validação visual quando o modal abre ou muda de modo
+    const originalAbrirModal = window.abrirModalAuth;
+    window.abrirModalAuth = function() {
+        originalAbrirModal();
+        document.querySelectorAll('.form-group').forEach(g => g.classList.remove('is-valid'));
+        setupRealTimeValidation();
+    };
+
+    // Prévia de Imagem para o Cadastro de Restaurante
+    window.handleRegisterImagePreview = function(input) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewImg = document.getElementById('auth-logo-preview-img');
+                const previewCont = document.getElementById('auth-logo-preview-container');
+                previewImg.src = e.target.result;
+                previewCont.style.display = 'block';
+                if (window.lucide) lucide.createIcons();
+            }
+            reader.readAsDataURL(file);
+        }
+    };
+
+    window.limparRegisterPreview = function() {
+        const fileInput = document.getElementById('auth-logo');
+        if (fileInput) fileInput.value = ''; // Limpa o input de arquivo
+        const previewImg = document.getElementById('auth-logo-preview-img');
+        if (previewImg) previewImg.src = '';
+        const previewCont = document.getElementById('auth-logo-preview-container');
+        if (previewCont) previewCont.style.display = 'none';
+    }
+
     // Observador de Autenticação (O coração do sistema real)
     auth.onAuthStateChanged(async (user) => {
         const isAdminPage = window.location.pathname.includes('admin-produtos');
+        const loadingOverlay = document.getElementById('admin-loading');
 
         if (user) {
             try {
                 const doc = await db.collection('usuarios').doc(user.uid).get();
                 const perfil = doc.data() || { role: 'comprador' };
-                sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid };
+                sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
             } catch (error) {
                 console.error("Erro ao recuperar perfil:", error);
                 sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
             }
 
             localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
+            
+            // Remove o spinner do admin se as permissões estiverem ok
+            if (loadingOverlay && sessaoAtiva.role === 'restaurante') {
+                loadingOverlay.style.opacity = '0';
+                setTimeout(() => loadingOverlay.style.display = 'none', 400);
+            }
+
             if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
             atualizarTopoNav();
 
@@ -927,7 +1181,16 @@ async function renderizarHeaderAdmin() {
     const nomeEl = document.getElementById('admin-nome-loja');
     if (!nomeEl) return; // Segurança para não rodar fora da página admin
 
-    nomeEl.innerText = config.nome_exibicao || sessaoAtiva.user;
+    const fallbackName = sessaoAtiva.name || (sessaoAtiva.user ? sessaoAtiva.user.split('@')[0].toUpperCase() : "PAINEL GESTOR");
+    nomeEl.innerText = config.nome_exibicao || fallbackName;
+    
+    // Nova: Preencher mensagem de boas-vindas
+    const welcomeMessageEl = document.getElementById('admin-welcome-message');
+    if (welcomeMessageEl) {
+        const ownerName = sessaoAtiva.name || (sessaoAtiva.user ? sessaoAtiva.user.split('@')[0] : 'Proprietário');
+        welcomeMessageEl.innerText = `Bem-vindo(a), ${ownerName}!`;
+    }
+
     document.getElementById('admin-descricao-loja').innerText = config.descricao_loja || "Gerencie seus produtos aqui";
     document.getElementById('admin-horario-display').innerText = `${config.abertura || 18}h - ${config.fechamento || 23}h`;
     document.getElementById('admin-tempo-display').innerText = config.tempo_entrega || '30-50 min';
