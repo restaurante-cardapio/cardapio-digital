@@ -23,110 +23,122 @@
         </div>
     </nav>
 
-    <!-- Splash Screen Dinâmica -->
-    <div id="splash-screen" class="splash-screen">
-        <div class="splash-content">
-            <div class="shop-animate-icon">
-                <i data-lucide="store" stroke-width="1.5"></i>
+    <!-- Wrapper para a visualização da Loja -->
+    <div id="shop-view" style="display: none;">
+        <header class="shop-header">
+            <div class="header-cover" id="shop-header-cover">
             </div>
-            <p id="splash-phrase" class="splash-phrase"></p>
-            <div class="splash-loader"></div>
+            <div class="header-info">
+                <img id="logo-restaurante" class="restaurant-logo" style="display: none;" alt="Logo">
+                <h1 id="nome-loja-header">Carregando...</h1>
+                <p id="descricao-loja-header">O melhor sabor no conforto da sua casa</p>
+                <div style="display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div id="status-loja"></div>
+                    <div id="tempo-entrega-display" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: none;">
+                        🕒 <span id="tempo-min-max"></span>
+                    </div>
+                </div>
+                <div id="pontos-fidelidade" class="loyalty-badge" style="display: none; margin-top: 8px;"></div>
+            </div>
+        </header>
+
+        <main class="container-shop">
+            <div id="banner-carousel" class="banner-carousel"></div>
+
+            <div id="ultimo-pedido-container" class="last-order-banner" style="display: none;">
+                <div class="last-order-content">
+                    <div>
+                        <span class="badge" style="color: #92400e;">Recompra</span>
+                        <h4 style="margin: 5px 0 0 0;">Repetir último pedido?</h4>
+                        <p id="detalhes-ultimo-pedido" style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);"></p>
+                    </div>
+                    <button onclick="repetirUltimoPedido()" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: #f59e0b;">Repetir</button>
+                </div>
+            </div>
+
+            <div class="referral-banner">
+                <div style="text-align: left;">
+                    <h4 style="margin: 0; color: white;">📢 Indique e Ganhe!</h4>
+                    <p style="margin: 4px 0 0 0; font-size: 0.85rem; opacity: 0.9;">Convide um amigo e envie um desconto para ele!</p>
+                </div>
+                <button onclick="openModal('modal-referral')" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: white; color: #4f46e5;">Gerar Link</button>
+            </div>
+
+            <div class="search-container">
+                <input type="text" id="inputBusca" placeholder="Pesquisar pratos..." oninput="filtrarPorBusca()">
+            </div>
+
+            <div class="filter-container" id="filtros">
+                <button class="filter-btn active" data-filter="Todos" onclick="filtrar('Todos')">🍽️ Todos</button>
+                <button class="filter-btn" data-filter="Lanches" onclick="filtrar('Lanches')">🍔 Lanches</button>
+                <button class="filter-btn" data-filter="Pizzas" onclick="filtrar('Pizzas')">🍕 Pizzas</button>
+                <button class="filter-btn" data-filter="Bebidas" onclick="filtrar('Bebidas')">🥤 Bebidas</button>
+                <button class="filter-btn" data-filter="Sobremesas" onclick="filtrar('Sobremesas')">🍦 Sobremesas</button>
+                <button class="filter-btn tag-filter" data-filter="tagVeggie" onclick="filtrar('tagVeggie')">🥦 Veggie</button>
+                <button class="filter-btn tag-filter" data-filter="tagSpicy" onclick="filtrar('tagSpicy')">🌶️ Picante</button>
+                <button class="filter-btn tag-filter" data-filter="tagFeatured" onclick="filtrar('tagFeatured')">⭐ Destaque</button>
+            </div>
+
+            <div id="cardapio-secoes">
+                <!-- Skeleton Screen Inicial -->
+                <div class="produtos-grid">
+                    <div class="card skeleton-card">
+                        <div class="skeleton" style="width: 100%; height: 180px; border-radius: 12px; margin-bottom: 12px;"></div>
+                        <div class="skeleton" style="width: 60%; height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
+                        <div class="skeleton" style="width: 90%; height: 14px; border-radius: 4px; margin-bottom: 15px;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Rodapé do Total -->
+        <div class="cart-footer">
+            <div style="flex: 1;">
+                <div id="frete-info" style="font-size: 0.75rem; margin-bottom: 4px;"></div>
+                <div class="shipping-progress-container" id="frete-progress-cont" style="display:none;">
+                    <div class="shipping-progress-bar" id="frete-progress-bar" style="width: 0%"></div>
+                </div>
+                <div style="margin-top: 5px;">
+                    <strong>Total: R$ <span id="total-valor">0.00</span></strong>
+                </div>
+            </div>
+            <div class="cart-icon-container">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                <span id="cart-count" class="cart-count-badge">0</span>
+            </div>
+            <button onclick="abrirResumo()" style="background: var(--primary-color); color: white; border: none; padding: 14px 28px; border-radius: 100px; cursor: pointer; font-weight: 800; margin-left: 10px; box-shadow: 0 10px 20px rgba(var(--primary-color-rgb), 0.3);">Ver Sacola</button>
         </div>
     </div>
 
-    <header class="shop-header">
-        <div class="header-cover" id="shop-header-cover">
-        </div>
-        <div class="header-info">
-            <img id="logo-restaurante" class="restaurant-logo" style="display: none;" alt="Logo">
-            <h1 id="nome-loja-header">Carregando...</h1>
-            <p id="descricao-loja-header">O melhor sabor no conforto da sua casa</p>
-            <div style="display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <div id="status-loja"></div>
-                <div id="tempo-entrega-display" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: none;">
-                    🕒 <span id="tempo-min-max"></span>
-                </div>
+    <!-- Apresentação da Plataforma (Home Page) -->
+    <div id="platform-landing" style="display: none;">
+        <section class="landing-hero">
+            <h1>Transforme seu Restaurante com um Cardápio Digital</h1>
+            <p>Crie sua loja online, receba pedidos organizados no WhatsApp e fidelize seus clientes com uma experiência profissional.</p>
+            <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+                <button onclick="abrirModalAuth()" class="btn-hero-main">Começar Agora Grátis 🚀</button>
             </div>
-            <div id="pontos-fidelidade" class="loyalty-badge" style="display: none; margin-top: 8px;"></div>
-        </div>
-    </header>
+        </section>
 
-    <main class="container-shop">
-        <div id="banner-carousel" class="banner-carousel"></div>
-
-        <div id="ultimo-pedido-container" class="last-order-banner" style="display: none;">
-            <div class="last-order-content">
-                <div>
-                    <span class="badge" style="color: #92400e;">Recompra</span>
-                    <h4 style="margin: 5px 0 0 0;">Repetir último pedido?</h4>
-                    <p id="detalhes-ultimo-pedido" style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);"></p>
+        <div class="container" style="padding: 60px 20px;">
+            <div class="features-grid-landing">
+                <div class="feature-card-landing">
+                    <div class="feature-icon-circle">🛵</div>
+                    <h3>Pedidos no WhatsApp</h3>
+                    <p>Esqueça a bagunça. Receba pedidos formatados com endereço, itens e forma de pagamento direto no seu Whats.</p>
                 </div>
-                <button onclick="repetirUltimoPedido()" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: #f59e0b;">Repetir</button>
-            </div>
-        </div>
-
-        <div class="referral-banner">
-            <div style="text-align: left;">
-                <h4 style="margin: 0; color: white;">📢 Indique e Ganhe!</h4>
-                <p style="margin: 4px 0 0 0; font-size: 0.85rem; opacity: 0.9;">Convide um amigo e envie um desconto para ele!</p>
-            </div>
-            <button onclick="openModal('modal-referral')" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: white; color: #4f46e5;">Gerar Link</button>
-        </div>
-
-        <div class="search-container">
-            <input type="text" id="inputBusca" placeholder="Pesquisar pratos..." oninput="filtrarPorBusca()">
-        </div>
-
-        <div class="filter-container" id="filtros">
-            <button class="filter-btn active" data-filter="Todos" onclick="filtrar('Todos')">🍽️ Todos</button>
-            <button class="filter-btn" data-filter="Lanches" onclick="filtrar('Lanches')">🍔 Lanches</button>
-            <button class="filter-btn" data-filter="Pizzas" onclick="filtrar('Pizzas')">🍕 Pizzas</button>
-            <button class="filter-btn" data-filter="Bebidas" onclick="filtrar('Bebidas')">🥤 Bebidas</button>
-            <button class="filter-btn" data-filter="Sobremesas" onclick="filtrar('Sobremesas')">🍦 Sobremesas</button>
-            <button class="filter-btn tag-filter" data-filter="tagVeggie" onclick="filtrar('tagVeggie')">🥦 Veggie</button>
-            <button class="filter-btn tag-filter" data-filter="tagSpicy" onclick="filtrar('tagSpicy')">🌶️ Picante</button>
-            <button class="filter-btn tag-filter" data-filter="tagFeatured" onclick="filtrar('tagFeatured')">⭐ Destaque</button>
-            <!-- Adicione mais botões de tags aqui se tiver outras tags -->
-            <!-- Gerado dinamicamente pelo JS -->
-        </div>
-
-        <div id="cardapio-secoes">
-            <!-- Skeleton Screen Inicial -->
-            <div class="produtos-grid">
-                <div class="card skeleton-card">
-                    <div class="skeleton" style="width: 100%; height: 180px; border-radius: 12px; margin-bottom: 12px;"></div>
-                    <div class="skeleton" style="width: 60%; height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
-                    <div class="skeleton" style="width: 90%; height: 14px; border-radius: 4px; margin-bottom: 15px;"></div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div class="skeleton" style="width: 30%; height: 24px; border-radius: 4px;"></div>
-                        <div class="skeleton" style="width: 80px; height: 35px; border-radius: 10px;"></div>
-                    </div>
+                <div class="feature-card-landing">
+                    <div class="feature-icon-circle">📊</div>
+                    <h3>Gestão de Estoque</h3>
+                    <p>Controle seus pratos, pause vendas de itens esgotados e acompanhe seu faturamento em tempo real.</p>
                 </div>
-                <div class="card skeleton-card" style="display: none; @media (min-width: 768px) { display: flex; }">
-                    <div class="skeleton" style="width: 100%; height: 180px; border-radius: 12px; margin-bottom: 12px;"></div>
-                    <div class="skeleton" style="width: 60%; height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
-                    <div class="skeleton" style="width: 30%; height: 24px; border-radius: 4px;"></div>
+                <div class="feature-card-landing">
+                    <div class="feature-icon-circle">🎁</div>
+                    <h3>Fidelize Clientes</h3>
+                    <p>Cupons de desconto, sistema de pontos por compra e links de indicação para crescer organicamente.</p>
                 </div>
             </div>
         </div>
-    </main>
-
-    <!-- Rodapé do Total -->
-    <div class="cart-footer">
-        <div style="flex: 1;">
-            <div id="frete-info" style="font-size: 0.75rem; margin-bottom: 4px;"></div>
-            <div class="shipping-progress-container" id="frete-progress-cont" style="display:none;">
-                <div class="shipping-progress-bar" id="frete-progress-bar" style="width: 0%"></div>
-            </div>
-            <div style="margin-top: 5px;">
-                <strong>Total: R$ <span id="total-valor">0.00</span></strong>
-            </div>
-        </div>
-        <div class="cart-icon-container">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-            <span id="cart-count" class="cart-count-badge">0</span>
-        </div>
-        <button onclick="abrirResumo()" style="background: var(--primary-color); color: white; border: none; padding: 14px 28px; border-radius: 100px; cursor: pointer; font-weight: 800; margin-left: 10px; box-shadow: 0 10px 20px rgba(var(--primary-color-rgb), 0.3);">Ver Sacola</button>
     </div>
 
     <!-- Modal Auth Dinâmico -->
@@ -463,15 +475,37 @@
 
         async function loadStoreSpecificData() {
             const urlParams = new URLSearchParams(window.location.search);
-            let lojaNaUrl = urlParams.get('loja');
+            let lojaParam = urlParams.get('loja');
 
             try {
-                if (!lojaNaUrl) {
-                    console.log("Nenhuma loja especificada na URL. Usando padrão.");
-                    restauranteAtual = 'default@example.com';
-                } else {
-                    restauranteAtual = lojaNaUrl;
+                if (!lojaParam) {
+                    document.getElementById('platform-landing').style.display = 'block';
+                    document.getElementById('shop-view').style.display = 'none';
+                    document.title = "Cardápio Digital - Crie sua Loja Grátis";
+                    return;
                 }
+
+                document.getElementById('platform-landing').style.display = 'none';
+                document.getElementById('shop-view').style.display = 'block';
+
+                if (lojaParam.includes('@')) {
+                    // Se for e-mail, usa direto
+                    restauranteAtual = lojaParam;
+                } else {
+                    // Se for um apelido (slug), busca o e-mail do dono no Firestore
+                    const slugQuery = await db.collection('configuracoes')
+                        .where('slug', '==', lojaParam.toLowerCase())
+                        .limit(1)
+                        .get();
+                    
+                    if (!slugQuery.empty) {
+                        restauranteAtual = slugQuery.docs[0].id; // O ID do documento é o e-mail
+                    } else {
+                        restauranteAtual = lojaParam; // Tenta usar o param como e-mail se falhar
+                    }
+                }
+
+                if (!restauranteAtual) throw new Error("Restaurante não identificado");
 
                 // Carregar Configurações Específicas desta Loja do Firestore
                 configLoja = await getStoreConfig(restauranteAtual);
@@ -523,9 +557,6 @@
             } catch (error) {
                 console.error("Erro ao inicializar cardápio:", error);
                 document.getElementById('nome-loja-header').innerText = "Loja não encontrada";
-            } finally {
-                // Garante que o splash screen desapareça mesmo se houver erro
-                iniciarSplashScreen();
             }
         }
 
@@ -703,14 +734,16 @@
 
         function compartilharIndicacao() {
             const cupomDestaque = Object.keys(cuponsDaLoja)[0] || "PROMO10";
-            const link = `${window.location.origin}${window.location.pathname}?loja=${restauranteAtual}&cupom=${cupomDestaque}`;
-            const msg = `Ei! Estou te enviando um desconto para pedir na *${restauranteAtual.toUpperCase()}*! O cupom é aplicado direto no link: ${link}`;
+            const identificadorUrl = configLoja.slug || restauranteAtual;
+            const link = `${window.location.origin}${window.location.pathname}?loja=${identificadorUrl}&cupom=${cupomDestaque}`;
+            const msg = `Ei! Estou te enviando um desconto para pedir na *${(configLoja.nome_exibicao || restauranteAtual).toUpperCase()}*! O cupom é aplicado direto no link: ${link}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         function gerarLinkExibicao() {
             const cupomDestaque = Object.keys(cuponsDaLoja)[0] || "PROMO10";
-            const link = `${window.location.origin}${window.location.pathname}?loja=${restauranteAtual}&cupom=${cupomDestaque}`;
+            const identificadorUrl = configLoja.slug || restauranteAtual;
+            const link = `${window.location.origin}${window.location.pathname}?loja=${identificadorUrl}&cupom=${cupomDestaque}`;
             document.getElementById('referral-link-display').innerText = link;
         }
 
@@ -838,7 +871,7 @@
                     }
 
                     if (items.length > 0) {
-                        const iconName = iconMap[cat] || 'package';
+                        const iconName = window.iconMap[cat] || 'package';
                         const btn = document.createElement('button');
                         btn.className = `filter-btn ${categoriaFiltro === cat ? 'active' : ''}`;
                         btn.innerHTML = `<i data-lucide="${iconName}" style="width:16px; height:16px"></i> ${cat}`;
@@ -854,10 +887,10 @@
                         grid.className = 'produtos-grid';
 
                         items.forEach(prod => {
-                            const prodData = JSON.stringify(prod).replace(/"/g, '&quot;');
+                            const prodData = JSON.stringify(prod).split('"').join('&quot;');
                             const itemNoCarrinho = carrinho.find(c => c.nome === prod.nome);
                             const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
-                            const prodIcon = iconMap[prod.categoria] || 'package';
+                            const prodIcon = window.iconMap[prod.categoria] || 'package';
                             const imageHTML = prod.imagem 
                                 ? `<img src="${prod.imagem}" alt="${prod.nome}">`
                                 : `<div class="card-image-placeholder"><i data-lucide="${prodIcon}"></i></div>`;
@@ -1357,8 +1390,9 @@
         }
 
         window.compartilharLoja = function() {
-            const link = window.location.href;
-            const msg = `Ei! Olha esse cardápio da *${restauranteAtual.toUpperCase()}*. Muita coisa gostosa, dá uma olhadinha: ${link}`;
+            const identificadorUrl = configLoja.slug || restauranteAtual;
+            const link = `${window.location.origin}${window.location.pathname}?loja=${identificadorUrl}`;
+            const msg = `Ei! Olha esse cardápio da *${(configLoja.nome_exibicao || restauranteAtual).toUpperCase()}*. Muita coisa gostosa, dá uma olhadinha: ${link}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         };
 

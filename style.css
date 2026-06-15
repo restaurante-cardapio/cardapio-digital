@@ -50,24 +50,9 @@ body {
     padding-bottom: 120px;
 }
 
-/* --- Bloqueio do Admin (Deslogado) --- */
-.admin-lock-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 9998;
-    display: none;
-    align-items: center;
-    justify-content: center;
-}
-
-body.is-locked .admin-lock-overlay { display: flex; }
-body.is-locked main, body.is-locked .container, body.is-locked header { filter: blur(4px); pointer-events: none; }
+Não esta /* Estilos de bloqueio removidos */
+.admin-lock-overlay { display: none !important; }
+body.is-locked main, body.is-locked .container, body.is-locked header { filter: none !important; pointer-events: auto !important; }
 
 /* --- Top Nav Dinâmica --- */
 .top-nav {
@@ -145,23 +130,7 @@ body.is-locked main, body.is-locked .container, body.is-locked header { filter: 
 .is-logged-in #auth-mode-container,
 .is-logged-in #form-auth-inputs { display: none; }
 
-/* --- Splash Screen Criativa --- */
-.splash-screen {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-color: var(--primary-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 20000; /* Garante que fique acima de tudo */
-    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
-}
-
-.splash-screen.hidden {
-    opacity: 0;
-    visibility: hidden;
-}
+.splash-screen { display: none !important; }
 
 .splash-content {
     text-align: center;
@@ -1728,4 +1697,60 @@ input:checked + .slider:before { transform: translateX(24px); }
         justify-content: flex-end;
         margin-top: 5px;
     }
+}
+
+/* --- Landing Page Styles --- */
+.landing-hero {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #991b1b 100%);
+    color: white;
+    padding: 100px 20px;
+    text-align: center;
+    border-bottom-left-radius: 40px;
+    border-bottom-right-radius: 40px;
+}
+
+.landing-hero h1 {
+    font-size: 2.5rem;
+    max-width: 800px;
+    margin: 0 auto 20px;
+    color: white !important;
+}
+
+.landing-hero p {
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto;
+    opacity: 0.9;
+}
+
+.btn-hero-main {
+    background: white;
+    color: var(--primary-color);
+    border: none;
+    padding: 15px 40px;
+    border-radius: 100px;
+    font-weight: 800;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.features-grid-landing {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    margin-top: -40px;
+}
+
+.feature-card-landing {
+    background: white;
+    padding: 30px;
+    border-radius: 24px;
+    box-shadow: var(--shadow-md);
+    text-align: center;
+}
+
+.feature-icon-circle {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
 }

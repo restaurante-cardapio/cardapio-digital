@@ -44,6 +44,16 @@ async function uploadParaStorage(file, folder) {
     return url;
 }
 
+// Função auxiliar para criar slug amigável (ex: "Minha Loja" -> "minha-loja")
+const gerarSlug = (texto) => {
+    return texto.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .replace(/[^a-z0-9]/g, "-")     // Substitui caracteres especiais por hifen
+        .replace(/-+/g, "-")             // Remove hifens duplos
+        .replace(/^-|-$/g, "");          // Remove hifens no início ou fim
+};
+
 let pedidosUnsubscribe = null; // Armazena a função para parar de ouvir pedidos
 let cachePedidosAdmin = []; // Cache para evitar requisições repetidas ao filtrar
 let filtroStatusAdmin = 'Todos'; // Estado global do filtro no Admin
@@ -63,16 +73,8 @@ async function getStoreConfig(ownerEmail) {
 
 function verificarProtecaoAdmin() {
     const isAdminPage = window.location.pathname.includes('admin-produtos');
-    if (isAdminPage) {
-        if (!sessaoAtiva || sessaoAtiva.role !== 'restaurante') {
-            document.body.classList.add('is-locked');
-            // Abre o modal de login automaticamente se não houver restaurante logado
-            setTimeout(() => { if (typeof window.abrirModalAuth === 'function') window.abrirModalAuth(); }, 500);
-        } else {
-            // Inconsistência corrigida: Remove o bloqueio se o utilizador for válido
-            document.body.classList.remove('is-locked');
-        }
-    }
+    // Proteção removida a pedido do usuário
+    document.body.classList.remove('is-locked');
 }
 
 async function logout() {
@@ -368,19 +370,24 @@ window.processarAuth = async function(e) {
                 const close = document.getElementById('auth-close').value || "23";
                 const logoFile = document.getElementById('auth-logo').files[0];
                 let logoUrl = logoFile ? await uploadParaStorage(logoFile, 'loja') : "";
+                
+                // Gera o slug baseado no nome da loja
+                const slug = gerarSlug(name);
 
                 await db.collection('configuracoes').doc(email).set({
                     nome_exibicao: name,
                     whatsapp: phone.replace(/\D/g, ""),
                     abertura: open,
                     fechamento: close,
-                    logo: logoUrl
+                    logo: logoUrl,
+                    slug: slug
                 }, { merge: true });
             }
             showToast('Conta criada com sucesso!');
             window.limparRegisterPreview(); // Limpa a prévia após o cadastro
             } catch (error) {
-                let msg = error.code === 'auth/user-not-found' ? 'Usuário não encontrado' : error.message;
+                let msg = error.message;
+                if (error.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
                 return showToast(msg, 'error');
             }
         }
@@ -482,15 +489,24 @@ function inicializarSistema() {
                 try {
                     let doc = await db.collection('usuarios').doc(user.uid).get();
                     
-                    // Se o documento não existe ainda, aguarda um pouco (comum após cadastro)
-                    if (!doc.exists && isAdminPage) {
-                        await new Promise(r => setTimeout(r, 1200));
-                        doc = await db.collection('usuarios').doc(user.uid).get();
+                    // Aguarda a propagação do documento no Firestore (essencial para novos cadastros)
+                    if (!doc.exists) {
+                        for (let i = 0; i < 5; i++) {
+                            await new Promise(r => setTimeout(r, 1000));
+                            doc = await db.collection('usuarios').doc(user.uid).get();
+                            if (doc.exists) break;
+                        }
                     }
 
-                    const perfil = doc.exists ? doc.data() : { role: 'comprador' };
-                    sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
-                    localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
+                    if (doc.exists) {
+                        const perfil = doc.data();
+                        sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
+                        localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
+                    } else {
+                        // Se o documento realmente não existir após as tentativas, define como comprador
+                        sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
+                        localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
+                    }
                 } catch (error) {
                     console.error("Erro ao recuperar perfil:", error);
                     sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
@@ -500,25 +516,13 @@ function inicializarSistema() {
                 atualizarTopoNav();
 
                 if (isAdminPage) {
-                    if (sessaoAtiva.role === 'restaurante') {
-                        document.body.classList.remove('is-locked');
-                        // Inicializa os dados do painel admin
-                        showSection('dashboard');
-                        renderizarHeaderAdmin();
-                        atualizarListaAdmin();
-                        atualizarRelatorio();
-                        atualizarSelectCategorias();
-                    } else {
-                        showToast('Acesso restrito a administradores', 'error');
-                        document.body.classList.add('is-locked'); // Bloqueia a interface imediatamente
-                        setTimeout(() => {
-                            // Em vez de redirecionar para index, deslogamos o usuário inválido.
-                            // Isso fará com que o observador (user = null) abra o modal de login aqui mesmo.
-                            auth.signOut();
-                            localStorage.removeItem('usuario_logado');
-                        }, 1500);
-                    }
-                } else if (sessaoAtiva.role === 'restaurante') {
+                    document.body.classList.remove('is-locked');
+                    showSection('dashboard');
+                    renderizarHeaderAdmin();
+                    atualizarListaAdmin();
+                    atualizarRelatorio();
+                    atualizarSelectCategorias();
+                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage) {
                     if (confirm('Você está logado como restaurante. Deseja ir para o Painel Administrativo?')) {
                         window.location.href = 'admin-produtos.html';
                     }
@@ -527,7 +531,7 @@ function inicializarSistema() {
                 sessaoAtiva = null;
                 localStorage.removeItem('usuario_logado');
                 atualizarTopoNav();
-                if (isAdminPage) verificarProtecaoAdmin();
+                // Bloqueio removido
             }
         });
 }
@@ -1136,7 +1140,10 @@ window.salvarConfigRapida = async function(campo, valor) {
     try {
         const config = await carregarConfiguracoesRestaurante();
         
-        if (campo === 'nome') config.nome_exibicao = valor;
+        if (campo === 'nome') {
+            config.nome_exibicao = valor;
+            config.slug = gerarSlug(valor); // GERA O SLUG AO EDITAR O NOME NO HEADER
+        }
         if (campo === 'descricao') config.descricao_loja = valor;
         if (campo === 'tempo') {
             let val = valor.toLowerCase().includes('min') ? valor : valor + ' min';
@@ -1161,11 +1168,22 @@ window.salvarConfigRapida = async function(campo, valor) {
 async function renderizarHeaderAdmin() {
     if (!sessaoAtiva || sessaoAtiva.role !== 'restaurante') return;
 
-    const config = await carregarConfiguracoesRestaurante(); // Carrega do Firestore
+    let config = await carregarConfiguracoesRestaurante(); // Carrega do Firestore
     const nomeEl = document.getElementById('admin-nome-loja');
     if (!nomeEl) return; // Segurança para não rodar fora da página admin
 
     const fallbackName = sessaoAtiva.name || (sessaoAtiva.user ? sessaoAtiva.user.split('@')[0].toUpperCase() : "PAINEL GESTOR");
+
+    // Garante que a loja tenha um slug amigável baseado no nome (e não no email)
+    if (!config.slug) {
+        const novoSlug = gerarSlug(config.nome_exibicao || fallbackName);
+        await db.collection('configuracoes').doc(sessaoAtiva.user).set({
+            slug: novoSlug,
+            nome_exibicao: config.nome_exibicao || fallbackName
+        }, { merge: true });
+        config.slug = novoSlug;
+    }
+
     nomeEl.innerText = config.nome_exibicao || fallbackName;
     
     // Nova: Preencher mensagem de boas-vindas
@@ -1197,7 +1215,8 @@ async function renderizarHeaderAdmin() {
     const linkEl = document.getElementById('link-loja-exibicao');
     if (linkEl) {
         const urlBase = window.location.href.split('admin-produtos.html')[0];
-        linkEl.innerText = `${urlBase}index.html?loja=${sessaoAtiva.user}`;
+        const storeSlug = config.slug || sessaoAtiva.user; // Fallback para e-mail se não houver slug
+        linkEl.innerText = `${urlBase}index.html?loja=${storeSlug}`;
     }
 }
 
@@ -1255,8 +1274,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             pix: inputPix.value,
             taxa_entrega: inputTaxa.value,
             cupons: inputCupons.value,
-            categorias_custom: inputCategoriasCustom.value,
+            categorias_custom: inputCategoriasCustom.value
         };
+
+        // Força a criação do slug se ele não existir ou se o nome de exibição for válido
+        const nomeParaSlug = configAtual.nome_exibicao || sessaoAtiva.name;
+        if (nomeParaSlug) {
+            novasConfigs.slug = gerarSlug(nomeParaSlug);
+        }
 
         const arquivoLogo = inputLogo.files[0];
         if (arquivoLogo) {
