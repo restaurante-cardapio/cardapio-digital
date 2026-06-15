@@ -185,6 +185,49 @@ window.abrirModalAuth = function() {
     openModal('modal-auth');
 };
 
+// Validação em Tempo Real (Movida para escopo global do arquivo para ser acessível)
+window.setupRealTimeValidation = function() {
+    const inputs = document.querySelectorAll('#auth-register-steps input, #auth-register-steps select');
+    inputs.forEach(input => {
+        const group = input.closest('.form-group');
+        if (group && !group.querySelector('.valid-icon')) {
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'valid-icon';
+            iconSpan.innerHTML = '<i data-lucide="check-circle-2" style="width:18px; height:18px;"></i>';
+            group.appendChild(iconSpan);
+            if (window.lucide) lucide.createIcons();
+        }
+
+        input.addEventListener('input', () => {
+            let isValid = false;
+            const val = input.value.trim();
+            if (input.id === 'auth-name') isValid = val.length >= 3;
+            else if (input.id === 'auth-user-reg') isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+            else if (input.id === 'auth-pass-reg') {
+                isValid = val.length >= 6;
+                window.atualizarForcaSenha(val);
+            }
+            else if (input.id === 'auth-phone') isValid = val.length >= 14;
+            else if (input.tagName === 'SELECT') isValid = val !== "";
+            else isValid = val.length > 0;
+            group.classList.toggle('is-valid', isValid);
+        });
+    });
+};
+
+window.togglePasswordVisibility = function(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const btn = input.parentElement.querySelector('.toggle-password');
+    const icon = btn ? btn.querySelector('i') : null;
+    
+    input.type = input.type === 'password' ? 'text' : 'password';
+    if (icon) {
+        icon.setAttribute('data-lucide', input.type === 'password' ? 'eye' : 'eye-off');
+        if (window.lucide) lucide.createIcons();
+    }
+};
+
 window.setAuthMode = function(mode) {
     currentAuthMode = mode;
     const btnLogin = document.getElementById('btn-mode-login');
@@ -371,97 +414,39 @@ function inicializarSistema() {
     aplicarMascaraTelefone('auth-phone');        // Telefone no Cadastro
     aplicarMascaraTelefone('telefone-cliente'); // Telefone no Checkout
 
-    // Validação em Tempo Real
-    const setupRealTimeValidation = () => {
-        const inputs = document.querySelectorAll('#auth-register-steps input, #auth-register-steps select');
-        inputs.forEach(input => {
-            // Adiciona o ícone de check dinamicamente se não existir
-            const group = input.closest('.form-group');
-            if (group && !group.querySelector('.valid-icon')) {
-                const iconSpan = document.createElement('span');
-                iconSpan.className = 'valid-icon';
-                iconSpan.innerHTML = '<i data-lucide="check-circle-2" style="width:18px; height:18px;"></i>';
-                group.appendChild(iconSpan);
-                if (window.lucide) lucide.createIcons();
-            }
+    window.atualizarForcaSenha = function(val) {
+        const meter = document.getElementById('strength-meter');
+        const bar = document.getElementById('strength-bar');
+        const text = document.getElementById('strength-text');
+        if (!meter || !bar || !text) return;
+        
+        if (val.length > 0) {
+            meter.style.display = 'block';
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (/[A-Z]/.test(val)) score++;
+            if (/[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
 
-            input.addEventListener('input', () => {
-                let isValid = false;
-                const val = input.value.trim();
+            let width = "33%", color = "var(--danger)", label = "Fraca";
+            if (score >= 3) { width = "100%"; color = "var(--success)"; label = "Forte"; }
+            else if (score >= 1) { width = "66%"; color = "#fbbf24"; label = "Média"; }
 
-                if (input.id === 'auth-name') isValid = val.length >= 3;
-                else if (input.id === 'auth-user-reg') isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-                else if (input.id === 'auth-pass-reg') isValid = val.length >= 6;
-                else if (input.id === 'auth-phone') isValid = val.length >= 14;
-                else if (input.tagName === 'SELECT') isValid = val !== "";
-                else if (input.type === 'number') isValid = val !== "" && parseFloat(val) >= 0;
-                else if (input.type === 'file') isValid = input.files.length > 0;
-                else isValid = val.length > 0;
-
-                // Lógica específica para força da senha
-                if (input.id === 'auth-pass-reg') {
-                    const meter = document.getElementById('strength-meter');
-                    const bar = document.getElementById('strength-bar');
-                    const text = document.getElementById('strength-text');
-                    
-                    if (val.length > 0) {
-                        meter.style.display = 'block';
-                        let score = 0;
-                        if (val.length >= 8) score++;
-                        if (/[A-Z]/.test(val)) score++;
-                        if (/[0-9]/.test(val)) score++;
-                        if (/[^A-Za-z0-9]/.test(val)) score++;
-
-                        let width = "33%";
-                        let color = "var(--danger)";
-                        let label = "Fraca";
-
-                        if (score >= 3) {
-                            width = "100%";
-                            color = "var(--success)";
-                            label = "Forte";
-                        } else if (score >= 1) {
-                            width = "66%";
-                            color = "#fbbf24"; // Amarelo/Laranja
-                            label = "Média";
-                        }
-
-                        bar.style.width = width;
-                        bar.style.backgroundColor = color;
-                        text.innerText = label;
-                        text.style.color = color;
-                    } else {
-                        meter.style.display = 'none';
-                    }
-                }
-
-                group.classList.toggle('is-valid', isValid);
-            });
-        });
+            bar.style.width = width;
+            bar.style.backgroundColor = color;
+            text.innerText = label;
+            text.style.color = color;
+        } else {
+            meter.style.display = 'none';
+        }
     };
-
-window.togglePasswordVisibility = function(inputId) {
-    const input = document.getElementById(inputId);
-    const btn = input.nextElementSibling;
-    if (!btn || !btn.classList.contains('toggle-password')) return;
-    const icon = btn.querySelector('i');
     
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.setAttribute('data-lucide', 'eye-off');
-    } else {
-        input.type = 'password';
-        icon.setAttribute('data-lucide', 'eye');
-    }
-    if (window.lucide) lucide.createIcons();
-};
-
     // Reinicia a validação visual quando o modal abre ou muda de modo
     const originalAbrirModal = window.abrirModalAuth;
     window.abrirModalAuth = function() {
         originalAbrirModal();
         document.querySelectorAll('.form-group').forEach(g => g.classList.remove('is-valid'));
-        setupRealTimeValidation();
+        if (window.setupRealTimeValidation) window.setupRealTimeValidation();
     };
 
     // Prévia de Imagem para o Cadastro de Restaurante
@@ -492,19 +477,6 @@ window.togglePasswordVisibility = function(inputId) {
         // Observador de Autenticação Centralizado
         auth.onAuthStateChanged(async (user) => {
             const isAdminPage = window.location.pathname.includes('admin-produtos');
-            const loadingOverlay = document.getElementById('admin-loading');
-
-            const removerLoading = () => {
-                if (loadingOverlay) {
-                    loadingOverlay.style.opacity = '0';
-                    setTimeout(() => {
-                        if (loadingOverlay) loadingOverlay.style.display = 'none';
-                    }, 600); // Tempo levemente maior para garantir a transição suave do CSS
-                }
-            };
-
-            // Safety Timeout: Garante que o loading saia em até 6 segundos
-            setTimeout(removerLoading, 6000);
 
             if (user) {
                 try {
@@ -524,7 +496,6 @@ window.togglePasswordVisibility = function(inputId) {
                     sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
                 }
 
-                removerLoading();
                 if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
                 atualizarTopoNav();
 
@@ -555,7 +526,6 @@ window.togglePasswordVisibility = function(inputId) {
             } else {
                 sessaoAtiva = null;
                 localStorage.removeItem('usuario_logado');
-                removerLoading();
                 atualizarTopoNav();
                 if (isAdminPage) verificarProtecaoAdmin();
             }

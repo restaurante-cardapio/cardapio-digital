@@ -8,12 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Tela de Carregamento Admin -->
-    <div id="admin-loading" class="admin-loading-overlay">
-        <div class="spinner"></div>
-        <p style="font-weight: 700; color: var(--text-main);">Verificando permissões...</p>
-    </div>
-
     <nav class="top-nav">
         <div class="top-nav-left">
             <div id="auth-status-left" class="auth-trigger" onclick="abrirModalAuth()">
@@ -205,8 +199,8 @@
                     <div class="form-group">
                         <label>Senha</label>
                         <div class="password-wrapper">
-                            <input type="password" id="auth-pass" placeholder="••••">
-                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('auth-pass')">
+                            <input type="password" id="auth-pass" name="auth-pass" placeholder="••••">
+                            <button type="button" class="toggle-password" onclick="window.togglePasswordVisibility('auth-pass')">
                                 <i data-lucide="eye"></i>
                             </button>
                         </div>
