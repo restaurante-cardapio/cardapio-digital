@@ -536,14 +536,15 @@
             if (step > currentStep && currentStep === 1) {
                 const nome = document.getElementById('nome-cliente').value;
                 const tel = document.getElementById('telefone-cliente').value;
+                const tipoPedido = document.getElementById('tipo-pedido-toggle-hidden').value;
                 if (!nome || !tel) {
                     return showToast("Preencha seu nome e telefone!", "error");
                 }
-                if (document.getElementById('tipo-pedido-toggle').checked && !document.getElementById('endereco-entrega').value) {
+                if (tipoPedido === 'Entrega' && !document.getElementById('endereco-entrega').value) {
                     return showToast("Informe o endereço de entrega!", "error");
                 }
                 const cep = document.getElementById('cep-cliente').value.replace(/\D/g, '');
-                if (document.getElementById('tipo-pedido-toggle').checked && (!cep || cep.length !== 8)) {
+                if (tipoPedido === 'Entrega' && (!cep || cep.length !== 8)) {
                     return showToast("Informe um CEP válido para entrega!", "error");
                 }
             }
@@ -645,8 +646,7 @@
                     </li>`;
             });
 
-            const toggle = document.getElementById('tipo-pedido-toggle');
-            const tipoPedido = toggle && toggle.checked ? 'Entrega' : 'Retirada';
+            const tipoPedido = document.getElementById('tipo-pedido-toggle-hidden').value;
             let taxa = (tipoPedido === 'Entrega') ? TAXA_ENTREGA : 0;
             if (FRETE_GRATIS_VALOR > 0 && subtotal >= FRETE_GRATIS_VALOR) taxa = 0;
 
@@ -678,7 +678,7 @@
             document.getElementById('bairro-cliente').value = localStorage.getItem('cliente_bairro') || '';
             
             const tipoPedidoSalvo = localStorage.getItem('cliente_tipo_pedido') || 'Entrega';
-            document.getElementById('tipo-pedido-toggle').checked = (tipoPedidoSalvo === 'Entrega');
+            if (window.updateOrderTypeSelection) window.updateOrderTypeSelection(tipoPedidoSalvo);
 
             currentStep = 1;
             changeStep(1);
@@ -1318,7 +1318,7 @@
             document.getElementById('telefone-cliente').value = '';
             document.getElementById('endereco-entrega').value = '';
             document.getElementById('troco-para').value = '';
-            document.getElementById('tipo-pedido-toggle').checked = true; // Reseta para Entrega
+            if (window.updateOrderTypeSelection) window.updateOrderTypeSelection('Entrega');
             document.getElementById('cupom-input').value = '';
             document.getElementById('observacoes').value = '';
             closeModal('modal-carrinho');
@@ -1446,10 +1446,8 @@
             }
         });
 
-        // Mostrar/Ocultar campo de endereço e atualizar taxa de entrega
-        function toggleEnderecoField() {
-            const toggle = document.getElementById('tipo-pedido-toggle');
-            const tipoPedido = toggle && toggle.checked ? 'Entrega' : 'Retirada';
+        window.toggleEnderecoField = function() {
+            const tipoPedido = document.getElementById('tipo-pedido-toggle-hidden').value;
             const divEndereco = document.getElementById('div-endereco');
             const labelEntregaResumo = document.getElementById('label-entrega-resumo');
 

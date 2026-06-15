@@ -489,63 +489,77 @@ window.togglePasswordVisibility = function(inputId) {
         if (previewCont) previewCont.style.display = 'none';
     }
 
-    // Observador de Autenticação (O coração do sistema real)
-    auth.onAuthStateChanged(async (user) => {
-        const isAdminPage = window.location.pathname.includes('admin-produtos');
-        const loadingOverlay = document.getElementById('admin-loading');
+        // Observador de Autenticação Centralizado
+        auth.onAuthStateChanged(async (user) => {
+            const isAdminPage = window.location.pathname.includes('admin-produtos');
+            const loadingOverlay = document.getElementById('admin-loading');
 
-        if (user) {
-            try {
-                const doc = await db.collection('usuarios').doc(user.uid).get();
-                const perfil = doc.data() || { role: 'comprador' };
-                sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
-            } catch (error) {
-                console.error("Erro ao recuperar perfil:", error);
-                sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
-            }
-
-            localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
-            
-            // Remove o spinner do admin se as permissões estiverem ok
-            if (loadingOverlay && sessaoAtiva.role === 'restaurante') {
-                loadingOverlay.style.opacity = '0';
-                setTimeout(() => loadingOverlay.style.display = 'none', 400);
-            }
-
-            if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
-            atualizarTopoNav();
-
-            // Lógica de Redirecionamento
-            if (isAdminPage) {
-                if (sessaoAtiva.role === 'restaurante') {
-                    document.body.classList.remove('is-locked');
-                } else {
-                    // Se um cliente tentar entrar no admin, mandamos de volta
-                    showToast('Acesso restrito a administradores', 'error');
-                    setTimeout(() => window.location.href = 'index.html', 2000);
+            const removerLoading = () => {
+                if (loadingOverlay) {
+                    loadingOverlay.style.opacity = '0';
+                    setTimeout(() => {
+                        if (loadingOverlay) loadingOverlay.style.display = 'none';
+                    }, 600); // Tempo levemente maior para garantir a transição suave do CSS
                 }
-            } else if (sessaoAtiva.role === 'restaurante') {
-                // Se o dono logar na index, sugerimos ir para o painel
-                if (confirm('Deseja aceder ao Painel Administrativo?')) {
-                    window.location.href = 'admin-produtos.html';
-                }
-            }
-        } else {
-            sessaoAtiva = null;
-            localStorage.removeItem('usuario_logado');
-            atualizarTopoNav();
-            if (isAdminPage) verificarProtecaoAdmin();
-        }
+            };
 
-        // Renderização de dados do Admin
-        if (sessaoAtiva && sessaoAtiva.role === 'restaurante' && window.location.href.includes('admin-produtos.html')) {
-            showSection('dashboard');
-            renderizarHeaderAdmin();
-            atualizarListaAdmin();
-            atualizarRelatorio();
-            atualizarSelectCategorias();
-        }
-    });
+            // Safety Timeout: Garante que o loading saia em até 6 segundos
+            setTimeout(removerLoading, 6000);
+
+            if (user) {
+                try {
+                    let doc = await db.collection('usuarios').doc(user.uid).get();
+                    
+                    // Se o documento não existe ainda, aguarda um pouco (comum após cadastro)
+                    if (!doc.exists && isAdminPage) {
+                        await new Promise(r => setTimeout(r, 1200));
+                        doc = await db.collection('usuarios').doc(user.uid).get();
+                    }
+
+                    const perfil = doc.exists ? doc.data() : { role: 'comprador' };
+                    sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
+                    localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
+                } catch (error) {
+                    console.error("Erro ao recuperar perfil:", error);
+                    sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
+                }
+
+                removerLoading();
+                if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
+                atualizarTopoNav();
+
+                if (isAdminPage) {
+                    if (sessaoAtiva.role === 'restaurante') {
+                        document.body.classList.remove('is-locked');
+                        // Inicializa os dados do painel admin
+                        showSection('dashboard');
+                        renderizarHeaderAdmin();
+                        atualizarListaAdmin();
+                        atualizarRelatorio();
+                        atualizarSelectCategorias();
+                    } else {
+                        showToast('Acesso restrito a administradores', 'error');
+                        document.body.classList.add('is-locked'); // Bloqueia a interface imediatamente
+                        setTimeout(() => {
+                            // Em vez de redirecionar para index, deslogamos o usuário inválido.
+                            // Isso fará com que o observador (user = null) abra o modal de login aqui mesmo.
+                            auth.signOut();
+                            localStorage.removeItem('usuario_logado');
+                        }, 1500);
+                    }
+                } else if (sessaoAtiva.role === 'restaurante') {
+                    if (confirm('Você está logado como restaurante. Deseja ir para o Painel Administrativo?')) {
+                        window.location.href = 'admin-produtos.html';
+                    }
+                }
+            } else {
+                sessaoAtiva = null;
+                localStorage.removeItem('usuario_logado');
+                removerLoading();
+                atualizarTopoNav();
+                if (isAdminPage) verificarProtecaoAdmin();
+            }
+        });
 }
 
 // Centraliza a inicialização apenas no carregamento do DOM para evitar erros de referência nula
