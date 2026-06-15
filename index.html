@@ -7,18 +7,44 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Top Nav Dinâmica -->
+    <nav class="top-nav">
+        <div class="top-nav-left">
+            <div id="auth-status-left" class="auth-trigger" onclick="abrirModalAuth()">
+                <i data-lucide="user-circle"></i>
+                <span>Entrar / Cadastrar</span>
+            </div>
+        </div>
+        <div class="top-nav-right">
+            <div id="meus-pedidos-btn" class="auth-trigger" style="display:none;" onclick="abrirMeusPedidos()">
+                <i data-lucide="package"></i>
+                <span>Meus Pedidos</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Splash Screen Dinâmica -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-content">
+            <div class="shop-animate-icon">
+                <i data-lucide="store" stroke-width="1.5"></i>
+            </div>
+            <p id="splash-phrase" class="splash-phrase"></p>
+            <div class="splash-loader"></div>
+        </div>
+    </div>
+
     <header class="shop-header">
-        <div class="header-cover" id="header-cover-bg">
-            <button onclick="toggleTheme()" class="theme-toggle" title="Alternar Tema" style="top: 15px; right: 15px;">🌓</button>
+        <div class="header-cover" id="shop-header-cover">
         </div>
         <div class="header-info">
             <img id="logo-restaurante" class="restaurant-logo" style="display: none;" alt="Logo">
-            <h1 id="nome-loja-header">Meu Restaurante</h1>
-            <p>O melhor sabor no conforto da sua casa</p>
+            <h1 id="nome-loja-header">Carregando...</h1>
+            <p id="descricao-loja-header">O melhor sabor no conforto da sua casa</p>
             <div style="display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <div id="status-loja"></div>
                 <div id="tempo-entrega-display" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: none;">
-                    🕒 <span id="tempo-min-max"></span> min
+                    🕒 <span id="tempo-min-max"></span>
                 </div>
             </div>
             <div id="pontos-fidelidade" class="loyalty-badge" style="display: none; margin-top: 8px;"></div>
@@ -45,16 +71,6 @@
                 <p style="margin: 4px 0 0 0; font-size: 0.85rem; opacity: 0.9;">Convide um amigo e envie um desconto para ele!</p>
             </div>
             <button onclick="openModal('modal-referral')" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: white; color: #4f46e5;">Gerar Link</button>
-        </div>
-
-        <div class="last-order-banner" style="background: #ecfdf5; border-color: #a7f3d0; margin-bottom: 24px;">
-            <div class="last-order-content">
-                <div style="text-align: left;">
-                    <h4 style="margin: 0; color: #065f46;">💎 Clube VIP WhatsApp</h4>
-                    <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #047857;">Receba promoções exclusivas e novidades!</p>
-                </div>
-                <button onclick="openModal('modal-vip')" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: #10b981;">Participar</button>
-            </div>
         </div>
 
         <div class="search-container">
@@ -111,6 +127,52 @@
             <span id="cart-count" class="cart-count-badge">0</span>
         </div>
         <button onclick="abrirResumo()" style="background: var(--primary-color); color: white; border: none; padding: 14px 28px; border-radius: 100px; cursor: pointer; font-weight: 800; margin-left: 10px; box-shadow: 0 10px 20px rgba(var(--primary-color-rgb), 0.3);">Ver Sacola</button>
+    </div>
+
+    <!-- Modal Auth Dinâmico -->
+    <div id="modal-auth" class="modal">
+        <div class="modal-content">
+            <button onclick="closeModal('modal-auth')" class="btn-close-modal"><i data-lucide="x"></i></button>
+            <h2 id="auth-modal-title">Acesse sua conta</h2>
+            
+            <div class="auth-mode-switch">
+                <button id="btn-mode-login" class="auth-mode-btn active" onclick="setAuthMode('login')">Login</button>
+                <button id="btn-mode-register" class="auth-mode-btn" onclick="setAuthMode('register')">Cadastrar</button>
+            </div>
+
+            <form id="form-auth-dynamic" onsubmit="processarAuth(event)">
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="auth-user" required placeholder="Nome de usuário">
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="auth-pass" required placeholder="••••">
+                </div>
+                <div class="form-group" id="group-role" style="display: none;">
+                    <label>Tipo de Conta</label>
+                    <select id="auth-role">
+                        <option value="comprador">🛍️ Comprador</option>
+                        <option value="restaurante">👨‍🍳 Restaurante</option>
+                    </select>
+                </div>
+                <button type="submit" id="btn-auth-submit" class="btn-add" style="width: 100%; margin-top: 10px;">Entrar</button>
+                <div id="btn-logout-area" style="display: none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <button type="button" onclick="logout()" class="btn-danger" style="width: 100%; margin:0;">Sair da Conta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Meus Pedidos -->
+    <div id="modal-meus-pedidos" class="modal">
+        <div class="modal-content">
+            <button onclick="closeModal('modal-meus-pedidos')" class="btn-close-modal"><i data-lucide="x"></i></button>
+            <h2 style="text-align: left; margin-bottom: 20px;">Meus Pedidos</h2>
+            <ul id="lista-meus-pedidos" class="cart-item-list" style="margin-top: 10px;">
+                <!-- Preenchido via JS -->
+            </ul>
+        </div>
     </div>
 
     <!-- Modal de Resumo -->
@@ -240,25 +302,6 @@
         </div>
     </div>
 
-    <!-- Modal: Cadastro Lista VIP -->
-    <div id="modal-vip" class="modal">
-        <div class="modal-content">
-            <button onclick="closeModal('modal-vip')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
-            <h2>Entrar para o Clube VIP</h2>
-            <p style="color: var(--text-muted); margin-bottom: 20px;">Fique por dentro das nossas melhores ofertas!</p>
-            <div class="form-group">
-                <label>Seu Nome</label>
-                <input type="text" id="vip-nome" placeholder="Como podemos te chamar?">
-            </div>
-            <div class="form-group">
-                <label>WhatsApp</label>
-                <input type="tel" id="vip-whatsapp" placeholder="(00) 00000-0000">
-            </div>
-            <button onclick="cadastrarVIP()" class="btn-add" style="width: 100%; background: #10b981;">Quero receber ofertas!</button>
-            <button onclick="closeModal('modal-vip')" style="background: none; border: none; color: var(--text-muted); width: 100%; margin-top: 10px; cursor: pointer;">Agora não</button>
-        </div>
-    </div>
-
     <!-- Modal: Indique e Ganhe -->
     <div id="modal-referral" class="modal">
         <div class="modal-content" style="text-align: center;">
@@ -293,29 +336,20 @@
     <!-- Biblioteca de Ícones Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <script src="script.js"></script>
     <script>
         // Identificação da Loja via URL
         const urlParams = new URLSearchParams(window.location.search);
         const restauranteAtual = urlParams.get('loja');
 
         if (!restauranteAtual) {
-            window.location.href = 'login.html';
+            // Se não houver loja na URL, podemos definir uma padrão ou abrir o seletor
+            console.log("Nenhuma loja especificada na URL");
         }
 
         // Carregar Configurações Específicas desta Loja
         const todasConfigs = JSON.parse(localStorage.getItem('configs_restaurantes')) || {};
         const configLoja = todasConfigs[restauranteAtual] || {};
-
-        if (configLoja.cor_principal) {
-            document.documentElement.style.setProperty('--primary-color', configLoja.cor_principal);
-            // Gera automaticamente uma cor mais escura para o hover/gradiente
-            const hex = configLoja.cor_principal.replace('#', '');
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            const corHover = `rgb(${Math.max(0, r-30)}, ${Math.max(0, g-30)}, ${Math.max(0, b-30)})`;
-            document.documentElement.style.setProperty('--primary-hover', corHover);
-        }
 
         if (configLoja.logo) {
             const logoImg = document.getElementById('logo-restaurante');
@@ -323,12 +357,19 @@
             logoImg.style.display = 'block';
         }
 
+        if (configLoja.banner_header) {
+            document.getElementById('shop-header-cover').style.backgroundImage = `url('${configLoja.banner_header}')`;
+            document.getElementById('shop-header-cover').style.backgroundSize = 'cover';
+            document.getElementById('shop-header-cover').style.backgroundPosition = 'center';
+        }
+
         if (configLoja.tempo_entrega) {
             document.getElementById('tempo-min-max').innerText = configLoja.tempo_entrega;
             document.getElementById('tempo-entrega-display').style.display = 'block';
         }
 
-        document.getElementById('nome-loja-header').innerText = restauranteAtual.toUpperCase();
+        document.getElementById('nome-loja-header').innerText = configLoja.nome_exibicao || restauranteAtual.toUpperCase();
+        document.getElementById('descricao-loja-header').innerText = configLoja.descricao_loja || "O melhor sabor no conforto da sua casa";
         document.title = `${restauranteAtual.toUpperCase()} - Cardápio Digital`;
 
         const WHATSAPP_RESTAURANTE = configLoja.whatsapp || ""; 
@@ -337,17 +378,6 @@
         let HORA_FECHAMENTO = parseInt(configLoja.fechamento) || 24;
         const PEDIDO_MINIMO = parseFloat(configLoja.pedido_minimo) || 0;
         const FRETE_GRATIS_VALOR = parseFloat(configLoja.frete_gratis_valor) || 0;
-
-        const iconMap = {
-            'Lanches': 'sandwich',
-            'Pizzas': 'pizza',
-            'Acompanhamentos': 'utensils',
-            'Bebidas': 'cup-soda',
-            'Sobremesas': 'ice-cream',
-            'Combos': 'package',
-            'Destaques': 'star',
-            'Outros': 'plus-circle'
-        };
 
         let currentStep = 1;
 
@@ -592,7 +622,11 @@
             });
 
             // 2. Ordenar categorias (Combos primeiro, Bebidas por último, etc.)
-            const ordem = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Acompanhamentos', 'Porções', 'Sobremesas', 'Bebidas'];
+            const categoriasPadrao = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Acompanhamentos', 'Porções', 'Sobremesas', 'Bebidas'];
+            const customStr = configLoja.categorias_custom || "";
+            const categoriasCustom = customStr.split(',').map(c => c.trim()).filter(c => c !== "");
+            const ordem = [...categoriasPadrao, ...categoriasCustom];
+
             const catsSorted = Object.keys(categorias).sort((a, b) => {
                 let idxA = ordem.indexOf(a);
                 let idxB = ordem.indexOf(b);
@@ -601,6 +635,14 @@
 
             // 3. Limpar containers
             filtroNav.innerHTML = '';
+            if (!termoBusca) {
+                const btnTodos = document.createElement('button');
+                btnTodos.className = `filter-btn ${categoriaFiltro === 'Todos' ? 'active' : ''}`;
+                btnTodos.innerHTML = `🍽️ Todos`;
+                btnTodos.onclick = () => filtrar('Todos');
+                filtroNav.appendChild(btnTodos);
+            }
+
             container.innerHTML = '';
 
             // 4. Renderizar Seções
@@ -618,7 +660,7 @@
 
                     // Adicionar botão na barra sticky
                     const btn = document.createElement('button');
-                    btn.className = `filter-btn ${idx === 0 && !termoBusca ? 'active' : ''}`;
+                    btn.className = `filter-btn ${categoriaFiltro === cat ? 'active' : ''}`;
                     btn.innerHTML = `<i data-lucide="${iconName}" style="width:16px; height:16px"></i> ${cat}`;
                     btn.onclick = (e) => scrollToCategory(catId, e.currentTarget);
                     filtroNav.appendChild(btn);
@@ -634,17 +676,45 @@
 
                     items.forEach(prod => {
                         const prodData = JSON.stringify(prod).replace(/"/g, '&quot;');
-                        const isPriority = prod.tagFeatured || cat === 'Combos';
+                        const itemNoCarrinho = carrinho.find(c => c.nome === prod.nome);
+                        const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
+                        const prodIcon = iconMap[prod.categoria] || 'package';
+
+                        const imageHTML = prod.imagem 
+                            ? `<img src="${prod.imagem}" alt="${prod.nome}">`
+                            : `<div class="card-image-placeholder"><i data-lucide="${prodIcon}"></i></div>`;
+
+                        let acaoBotao = '';
+                        if (qtd > 0) {
+                            acaoBotao = `
+                                <div class="card-qty-controls">
+                                    <button class="btn-card-qty" onclick="alterarQuantidadeCard('${prod.nome}', -1)"><i data-lucide="minus" style="width:14px"></i></button>
+                                    <span style="font-weight: 800; min-width: 20px; text-align: center;">${qtd}</span>
+                                    <button class="btn-card-qty" onclick="alterarQuantidadeCard('${prod.nome}', 1)"><i data-lucide="plus" style="width:14px"></i></button>
+                                </div>`;
+                        } else {
+                            acaoBotao = `
+                                <button class="btn-add" style="margin: 0; padding: 8px 16px; border-radius: 12px;" onclick="adicionarAoCarrinho(${prodData})">
+                                    <i data-lucide="plus" style="width: 16px; height: 16px; margin-right: 4px;"></i> Adicionar
+                                </button>`;
+                        }
                         
                         grid.innerHTML += `
-                            <div class="card ${isPriority ? 'priority-item' : ''} reveal">
-                                <img src="${prod.imagem || 'https://via.placeholder.com/300x180'}" alt="${prod.nome}">
-                                <div style="flex: 1; text-align: left; display: flex; flex-direction: column; justify-content: center;">
-                                    <h3 style="text-align: left; margin: 0 0 5px 0;">${prod.nome}</h3>
-                                    <p style="font-size: 0.85rem; margin-bottom: 10px;">${prod.descricao || ''}</p>
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="card reveal">
+                                <div class="card-image-container">
+                                    <div class="card-badges">
+                                        ${prod.tagFeatured ? '<span class="badge featured">★ Destaque</span>' : ''}
+                                        ${prod.tagVeggie ? '<span class="badge veggie">🥦 Veggie</span>' : ''}
+                                        ${prod.tagSpicy ? '<span class="badge spicy">🌶️ Picante</span>' : ''}
+                                    </div>
+                                    ${imageHTML}
+                                </div>
+                                <div class="card-content">
+                                    <h3 class="card-title">${prod.nome}</h3>
+                                    <p class="card-description">${prod.descricao || 'Sem descrição disponível.'}</p>
+                                    <div class="card-footer-row">
                                         <span class="preco">R$ ${parseFloat(prod.preco).toFixed(2)}</span>
-                                        <button class="btn-add" style="margin: 0; padding: 6px 12px;" onclick="adicionarAoCarrinho(${prodData})">Adicionar</button>
+                                        ${acaoBotao}
                                     </div>
                                 </div>
                             </div>`;
@@ -657,6 +727,55 @@
 
             // Renderiza os ícones após inserir o HTML
             lucide.createIcons();
+        }
+
+        function adicionarAoCarrinho(prod) {
+            const itemExistente = carrinho.find(item => item.nome === prod.nome);
+            
+            if (itemExistente) {
+                itemExistente.quantidade = (itemExistente.quantidade || 1) + 1;
+            } else {
+                carrinho.push({ 
+                    nome: prod.nome, 
+                    preco: parseFloat(prod.preco), 
+                    quantidade: 1, 
+                    adicionais: [],
+                    obs: "" 
+                });
+            }
+            
+            salvarCarrinho();
+            atualizarTotalBarra();
+            
+            // Atualiza os cards para mostrar o contador
+            const btnAtivo = document.querySelector('.filter-btn.active');
+            const termo = document.getElementById('inputBusca').value;
+            carregarCardapio(btnAtivo ? btnAtivo.dataset.filter : 'Todos', termo);
+
+            showToast(`${prod.nome} adicionado!`);
+
+            // Efeito de pulso no carrinho
+            const footer = document.querySelector('.cart-footer');
+            footer.classList.remove('cart-pulse');
+            void footer.offsetWidth; 
+            footer.classList.add('cart-pulse');
+        }
+
+        function alterarQuantidadeCard(nome, delta) {
+            const index = carrinho.findIndex(item => item.nome === nome);
+            if (index > -1) {
+                carrinho[index].quantidade += delta;
+                if (carrinho[index].quantidade <= 0) {
+                    carrinho.splice(index, 1);
+                }
+                salvarCarrinho();
+                atualizarTotalBarra();
+                
+                // Recarrega o cardápio para atualizar os números nos cards
+                const btnAtivo = document.querySelector('.filter-btn.active');
+                const termo = document.getElementById('inputBusca').value;
+                carregarCardapio(btnAtivo ? btnAtivo.dataset.filter : 'Todos', termo);
+            }
         }
 
         function scrollToCategory(id, btn) {
@@ -864,11 +983,8 @@
             }
         }
 
-        function fecharModal() {
-            document.getElementById('modal-carrinho').style.display = 'none';
-            document.body.classList.remove('no-scroll');
-        }
-
+        // Removido fecharModal e closeModal daqui, pois agora usamos as funções globais do script.js
+        
         function finalizarPedido() {
             const nome = document.getElementById('nome-cliente').value;
             const telefone = document.getElementById('telefone-cliente').value;
@@ -970,10 +1086,12 @@
 
             // Salvar no histórico de vendas (Relatório Admin)
             const historico = JSON.parse(localStorage.getItem('historico_vendas')) || [];
+            const userLogadoAuth = JSON.parse(localStorage.getItem('usuario_logado'));
             historico.push({
                 id: Date.now(),
                 data: new Date().toLocaleString('pt-BR'),
                 cliente: nome,
+                usuario: userLogadoAuth ? userLogadoAuth.user : null,
                 total: totalFinal,
                 restauranteOwner: restauranteAtual,
                 itens: carrinho.map(item => `${item.quantidade}x ${item.nome}`)
@@ -1013,22 +1131,6 @@
             }
         }
 
-        function cadastrarVIP() {
-            const nome = document.getElementById('vip-nome').value;
-            const whatsapp = document.getElementById('vip-whatsapp').value;
-            if(!nome || !whatsapp) return showToast("Preencha seus dados!", "error");
-            
-            let leads = JSON.parse(localStorage.getItem(`leads_${restauranteAtual}`)) || [];
-            if(leads.find(l => l.whatsapp === whatsapp)) {
-                showToast("Você já está na nossa lista VIP!");
-            } else {
-                leads.push({ nome, whatsapp, data: new Date().toLocaleDateString() });
-                localStorage.setItem(`leads_${restauranteAtual}`, JSON.stringify(leads));
-                showToast("Bem-vindo à lista VIP!");
-            }
-            closeModal('modal-vip');
-        }
-
         function iniciarContagemRegressiva() {
             setInterval(() => {
                 document.querySelectorAll('.countdown-timer').forEach(el => {
@@ -1056,27 +1158,11 @@
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         };
 
-        function closeModal(id) { 
-            document.getElementById(id).style.display = 'none'; 
-            document.body.classList.remove('no-scroll');
-        }
-        function openModal(id) { 
-            document.getElementById(id).style.display = 'flex'; 
-            document.body.classList.add('no-scroll');
-        }
-
         function copiarPix() {
             const chave = document.getElementById('chave-pix-valor').innerText;
             navigator.clipboard.writeText(chave).then(() => {
                 showToast("Chave PIX copiada com sucesso!");
             });
-        }
-
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute('data-theme');
-            const target = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', target);
-            localStorage.setItem('theme', target);
         }
 
         function atualizarPontosUI() {
@@ -1090,8 +1176,25 @@
             }
         }
 
-        // Carregar tema salvo
-        if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        function iniciarSplashScreen() {
+            const splash = document.getElementById('splash-screen');
+            const phraseEl = document.getElementById('splash-phrase');
+            
+            const frases = [
+                "Preparando os melhores ingredientes...",
+                "Aquecendo o forno para você...",
+                "Separando seu pedido com carinho...",
+                "Quase pronto para o sabor!",
+                "Temperando tudo com perfeição..."
+            ];
+
+            phraseEl.innerText = frases[Math.floor(Math.random() * frases.length)];
+
+            // Pequeno delay para garantir que o DOM e as imagens iniciais foram processados
+            setTimeout(() => {
+                splash.classList.add('hidden');
+            }, 2000);
+        }
 
         function verificarUltimoPedido() {
             const ultimo = JSON.parse(localStorage.getItem('ultimo_pedido'));
@@ -1233,6 +1336,7 @@
         verificarCupomURL();
         gerarLinkExibicao();
         socialProofLoop();
+        iniciarSplashScreen();
         setTimeout(verificarCarrinhoAbandonado, 5000);
     </script>
 </body>
