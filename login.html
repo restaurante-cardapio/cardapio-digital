@@ -53,6 +53,12 @@
 
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Firebase SDKs (Versão Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="script.js"></script>
+
     <script>
         function toggleAuth(isRegister) {
             document.getElementById('login-section').style.display = isRegister ? 'none' : 'block';
@@ -74,46 +80,32 @@
         }
 
         // Cadastro
-        document.getElementById('registerForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const user = document.getElementById('reg-usuario').value;
-            const pass = document.getElementById('reg-senha').value;
-            const role = document.getElementById('reg-role').value;
-
-            let usuarios = JSON.parse(localStorage.getItem('usuarios_app')) || [];
-            
-            if (usuarios.find(u => u.user === user)) {
-                return showToast('Este usuário já existe!', 'error');
-            }
-
-            usuarios.push({ user, pass, role });
-            localStorage.setItem('usuarios_app', JSON.stringify(usuarios));
-            showToast('Cadastro realizado com sucesso! Faça login.');
-            toggleAuth(false);
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            // Reutiliza a função global configurada para Firebase
+            currentAuthMode = 'register';
+            document.getElementById('auth-user').value = document.getElementById('reg-usuario').value;
+            document.getElementById('auth-pass').value = document.getElementById('reg-senha').value;
+            document.getElementById('auth-role').value = document.getElementById('reg-role').value;
+            window.processarAuth(e);
         });
 
         // Login
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const user = document.getElementById('usuario').value;
-            const pass = document.getElementById('senha').value;
-
-            const usuarios = JSON.parse(localStorage.getItem('usuarios_app')) || [];
-            const usuarioEncontrado = usuarios.find(u => u.user === user && u.pass === pass);
-
-            if (usuarioEncontrado) {
-                // Salva a sessão do usuário
-                localStorage.setItem('usuario_logado', JSON.stringify(usuarioEncontrado));
-                
-                if (usuarioEncontrado.role === 'restaurante') {
-                    window.location.href = 'admin-produtos.html';
-                } else {
-                    window.location.href = 'index.html';
-                }
-            } else {
-                showToast('Usuário ou senha incorretos!', 'error');
-            }
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            currentAuthMode = 'login';
+            document.getElementById('auth-user').value = document.getElementById('usuario').value;
+            document.getElementById('auth-pass').value = document.getElementById('senha').value;
+            window.processarAuth(e);
         });
     </script>
+    
+    <!-- Elementos invisíveis para compatibilidade com o processarAuth global -->
+    <div style="display:none">
+        <input id="auth-user">
+        <input id="auth-pass">
+        <select id="auth-role">
+            <option value="restaurante">restaurante</option>
+            <option value="comprador">comprador</option>
+        </select>
+    </div>
 </body>
 </html>

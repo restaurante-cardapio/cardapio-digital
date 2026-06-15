@@ -333,51 +333,94 @@
 
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Firebase SDKs (Versão Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
     <!-- Biblioteca de Ícones Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <script src="script.js"></script>
     <script>
         // Identificação da Loja via URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const restauranteAtual = urlParams.get('loja');
+        let restauranteAtual;
+        let configLoja = {}; // Variável global para as configurações da loja
+        let WHATSAPP_RESTAURANTE = ""; 
+        let TAXA_ENTREGA = 0;
+        let HORA_ABERTURA = 0;
+        let HORA_FECHAMENTO = 24;
+        let PEDIDO_MINIMO = 0;
+        let FRETE_GRATIS_VALOR = 0;
 
-        if (!restauranteAtual) {
-            // Se não houver loja na URL, podemos definir uma padrão ou abrir o seletor
-            console.log("Nenhuma loja especificada na URL");
+        async function loadStoreSpecificData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let lojaNaUrl = urlParams.get('loja');
+
+            try {
+                if (!lojaNaUrl) {
+                    console.log("Nenhuma loja especificada na URL. Usando padrão.");
+                    restauranteAtual = 'default@example.com';
+                } else {
+                    restauranteAtual = lojaNaUrl;
+                }
+
+                // Carregar Configurações Específicas desta Loja do Firestore
+                configLoja = await getStoreConfig(restauranteAtual);
+
+                if (configLoja.logo) {
+                    const logoImg = document.getElementById('logo-restaurante');
+                    logoImg.src = configLoja.logo;
+                    logoImg.style.display = 'block';
+                }
+
+                if (configLoja.banner_header) {
+                    document.getElementById('shop-header-cover').style.backgroundImage = `url('${configLoja.banner_header}')`;
+                    document.getElementById('shop-header-cover').style.backgroundSize = 'cover';
+                    document.getElementById('shop-header-cover').style.backgroundPosition = 'center';
+                }
+
+                if (configLoja.tempo_entrega) {
+                    const tempoEl = document.getElementById('tempo-min-max');
+                    if (tempoEl) tempoEl.innerText = configLoja.tempo_entrega;
+                    document.getElementById('tempo-entrega-display').style.display = 'block';
+                }
+
+                const nomeExibicao = configLoja?.nome_exibicao || (restauranteAtual ? restauranteAtual.split('@')[0].toUpperCase() : "MINHA LOJA");
+                document.getElementById('nome-loja-header').innerText = nomeExibicao;
+                document.getElementById('descricao-loja-header').innerText = configLoja?.descricao_loja || "O melhor sabor no conforto da sua casa";
+                
+                document.title = `${nomeExibicao} - Cardápio Digital`;
+
+                WHATSAPP_RESTAURANTE = configLoja.whatsapp || ""; 
+                TAXA_ENTREGA = parseFloat(configLoja.taxa_entrega) || 0;
+                HORA_ABERTURA = parseInt(configLoja.abertura) || 0;
+                HORA_FECHAMENTO = parseInt(configLoja.fechamento) || 24;
+                PEDIDO_MINIMO = parseFloat(configLoja.pedido_minimo) || 0;
+                FRETE_GRATIS_VALOR = parseFloat(configLoja.frete_gratis_valor) || 0;
+
+                // Chamar funções que dependem de configLoja
+                carregarCuponsLoja();
+                await carregarCardapio();
+                carregarBanners();
+                verificarUltimoPedido();
+                atualizarPontosUI();
+                verificarLinkDireto();
+                iniciarContagemRegressiva();
+                verificarCupomURL();
+                gerarLinkExibicao();
+                socialProofLoop();
+                setTimeout(verificarCarrinhoAbandonado, 5000);
+                atualizarStatusLoja();
+            } catch (error) {
+                console.error("Erro ao inicializar cardápio:", error);
+                document.getElementById('nome-loja-header').innerText = "Loja não encontrada";
+            } finally {
+                // Garante que o splash screen desapareça mesmo se houver erro
+                iniciarSplashScreen();
+            }
         }
-
-        // Carregar Configurações Específicas desta Loja
-        const todasConfigs = JSON.parse(localStorage.getItem('configs_restaurantes')) || {};
-        const configLoja = todasConfigs[restauranteAtual] || {};
-
-        if (configLoja.logo) {
-            const logoImg = document.getElementById('logo-restaurante');
-            logoImg.src = configLoja.logo;
-            logoImg.style.display = 'block';
-        }
-
-        if (configLoja.banner_header) {
-            document.getElementById('shop-header-cover').style.backgroundImage = `url('${configLoja.banner_header}')`;
-            document.getElementById('shop-header-cover').style.backgroundSize = 'cover';
-            document.getElementById('shop-header-cover').style.backgroundPosition = 'center';
-        }
-
-        if (configLoja.tempo_entrega) {
-            document.getElementById('tempo-min-max').innerText = configLoja.tempo_entrega;
-            document.getElementById('tempo-entrega-display').style.display = 'block';
-        }
-
-        document.getElementById('nome-loja-header').innerText = configLoja.nome_exibicao || restauranteAtual.toUpperCase();
-        document.getElementById('descricao-loja-header').innerText = configLoja.descricao_loja || "O melhor sabor no conforto da sua casa";
-        document.title = `${restauranteAtual.toUpperCase()} - Cardápio Digital`;
-
-        const WHATSAPP_RESTAURANTE = configLoja.whatsapp || ""; 
-        const TAXA_ENTREGA = parseFloat(configLoja.taxa_entrega) || 0;
-        let HORA_ABERTURA = parseInt(configLoja.abertura) || 0;
-        let HORA_FECHAMENTO = parseInt(configLoja.fechamento) || 24;
-        const PEDIDO_MINIMO = parseFloat(configLoja.pedido_minimo) || 0;
-        const FRETE_GRATIS_VALOR = parseFloat(configLoja.frete_gratis_valor) || 0;
 
         let currentStep = 1;
 
@@ -409,10 +452,19 @@
             if (step === 4) renderResumoFinal();
         }
 
-        function renderModernSelection(containerId, categories) {
+        async function renderModernSelection(containerId, categories) {
             const container = document.getElementById(containerId);
-            const produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
-            const items = produtos.filter(p => p.owner === restauranteAtual && categories.includes(p.categoria));
+            if (!window.db) return;
+
+            const querySnapshot = await db.collection('produtos')
+                .where('owner', '==', restauranteAtual)
+                .where('categoria', 'in', categories)
+                .get();
+            
+            const items = [];
+            querySnapshot.forEach(doc => {
+                items.push({ ...doc.data(), id: doc.id });
+            });
             
             container.innerHTML = items.map(p => {
                 const noCarrinho = carrinho.some(item => item.nome === p.nome);
@@ -570,10 +622,10 @@
         }
 
         function isLojaAberta() {
+            // Agora usa configLoja que é carregada do Firestore
             const agora = new Date();
             const hora = agora.getHours();
-            const fechadaManualmente = localStorage.getItem('loja_fechada_manualmente') === 'true';
-
+            const fechadaManualmente = configLoja.fechada_manualmente === true;
             if (fechadaManualmente) {
                 return false; // Se fechada manualmente, está sempre fechada
             }
@@ -598,141 +650,142 @@
             }, 3000);
         }
 
-        function carregarCardapio(categoriaFiltro = 'Todos', termoBusca = '') {
+        async function carregarCardapio(categoriaFiltro = 'Todos', termoBusca = '') {
             const container = document.getElementById('cardapio-secoes');
             const filtroNav = document.getElementById('filtros');
-            const produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
-            const meusProdutos = produtos.filter(p => p.owner === restauranteAtual);
-
-            if (meusProdutos.length === 0) {
-                container.innerHTML = '<p class="loading">O cardápio está vazio.</p>';
-                return;
-            }
-            // 1. Filtrar e Agrupar produtos
-            const categorias = {};
             
-            let produtosProcessados = meusProdutos;
+            if (!window.db) return;
 
-            // Aplicar Filtro de Categoria ou Tag
-            if (categoriaFiltro !== 'Todos') {
-                if (['tagVeggie', 'tagSpicy', 'tagFeatured'].includes(categoriaFiltro)) {
-                    produtosProcessados = produtosProcessados.filter(p => p[categoriaFiltro]);
-                } else {
-                    produtosProcessados = produtosProcessados.filter(p => p.categoria === categoriaFiltro);
-                }
-            }
+            try {
+                const querySnapshot = await db.collection('produtos')
+                    .where('owner', '==', restauranteAtual)
+                    .get();
+                
+                const meusProdutos = [];
+                querySnapshot.forEach(doc => {
+                    meusProdutos.push({ ...doc.data(), id: doc.id });
+                });
 
-            produtosProcessados.forEach(p => {
-                if (!categorias[p.categoria]) categorias[p.categoria] = [];
-                categorias[p.categoria].push(p);
-            });
-
-            // 2. Ordenar categorias (Combos primeiro, Bebidas por último, etc.)
-            const categoriasPadrao = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Acompanhamentos', 'Porções', 'Sobremesas', 'Bebidas'];
-            const customStr = configLoja.categorias_custom || "";
-            const categoriasCustom = customStr.split(',').map(c => c.trim()).filter(c => c !== "");
-            const ordem = [...categoriasPadrao, ...categoriasCustom];
-
-            const catsSorted = Object.keys(categorias).sort((a, b) => {
-                let idxA = ordem.indexOf(a);
-                let idxB = ordem.indexOf(b);
-                return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
-            });
-
-            // 3. Limpar containers
-            filtroNav.innerHTML = '';
-            if (!termoBusca) {
-                const btnTodos = document.createElement('button');
-                btnTodos.className = `filter-btn ${categoriaFiltro === 'Todos' ? 'active' : ''}`;
-                btnTodos.innerHTML = `🍽️ Todos`;
-                btnTodos.onclick = () => filtrar('Todos');
-                filtroNav.appendChild(btnTodos);
-            }
-
-            container.innerHTML = '';
-
-            // 4. Renderizar Seções
-            catsSorted.forEach((cat, idx) => {
-                const catId = `cat-${cat.replace(/\s+/g, '-').toLowerCase()}`;
-                let items = categorias[cat];
-
-                // Filtro de busca
-            if (termoBusca && items) {
-                    items = items.filter(p => p.nome.toLowerCase().includes(termoBusca.toLowerCase()));
+                if (meusProdutos.length === 0) {
+                    container.innerHTML = '<p class="loading">O cardápio está vazio.</p>';
+                    return;
                 }
 
-                if (items.length > 0) {
-                    const iconName = iconMap[cat] || 'package';
+                // 1. Filtrar e Agrupar produtos
+                const categorias = {};
+                let produtosProcessados = meusProdutos;
 
-                    // Adicionar botão na barra sticky
-                    const btn = document.createElement('button');
-                    btn.className = `filter-btn ${categoriaFiltro === cat ? 'active' : ''}`;
-                    btn.innerHTML = `<i data-lucide="${iconName}" style="width:16px; height:16px"></i> ${cat}`;
-                    btn.onclick = (e) => scrollToCategory(catId, e.currentTarget);
-                    filtroNav.appendChild(btn);
+                // Aplicar Filtro de Categoria ou Tag
+                if (categoriaFiltro !== 'Todos') {
+                    if (['tagVeggie', 'tagSpicy', 'tagFeatured'].includes(categoriaFiltro)) {
+                        produtosProcessados = produtosProcessados.filter(p => p[categoriaFiltro]);
+                    } else {
+                        produtosProcessados = produtosProcessados.filter(p => p.categoria === categoriaFiltro);
+                    }
+                }
 
-                    // Criar Seção
-                    const section = document.createElement('section');
-                    section.className = 'category-section';
-                    section.id = catId;
-                    section.innerHTML = `<h2 class="category-title"><i data-lucide="${iconName}"></i> ${cat}</h2>`;
+                produtosProcessados.forEach(p => {
+                    if (!categorias[p.categoria]) categorias[p.categoria] = [];
+                    categorias[p.categoria].push(p);
+                });
 
-                    const grid = document.createElement('div');
-                    grid.className = 'produtos-grid';
+                // 2. Ordenar categorias
+                const categoriasPadrao = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Acompanhamentos', 'Porções', 'Sobremesas', 'Bebidas'];
+                const customStr = configLoja.categorias_custom || "";
+                const categoriasCustom = customStr.split(',').map(c => c.trim()).filter(c => c !== "");
+                const ordem = [...categoriasPadrao, ...categoriasCustom];
 
-                    items.forEach(prod => {
-                        const prodData = JSON.stringify(prod).replace(/"/g, '&quot;');
-                        const itemNoCarrinho = carrinho.find(c => c.nome === prod.nome);
-                        const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
-                        const prodIcon = iconMap[prod.categoria] || 'package';
+                const catsSorted = Object.keys(categorias).sort((a, b) => {
+                    let idxA = ordem.indexOf(a);
+                    let idxB = ordem.indexOf(b);
+                    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+                });
 
-                        const imageHTML = prod.imagem 
-                            ? `<img src="${prod.imagem}" alt="${prod.nome}">`
-                            : `<div class="card-image-placeholder"><i data-lucide="${prodIcon}"></i></div>`;
+                // 3. Limpar containers
+                filtroNav.innerHTML = '';
+                if (!termoBusca) {
+                    const btnTodos = document.createElement('button');
+                    btnTodos.className = `filter-btn ${categoriaFiltro === 'Todos' ? 'active' : ''}`;
+                    btnTodos.innerHTML = `🍽️ Todos`;
+                    btnTodos.onclick = () => filtrar('Todos');
+                    filtroNav.appendChild(btnTodos);
+                }
 
-                        let acaoBotao = '';
-                        if (qtd > 0) {
-                            acaoBotao = `
+                container.innerHTML = '';
+
+                // 4. Renderizar Seções
+                catsSorted.forEach((cat) => {
+                    const catId = `cat-${cat.replace(/\s+/g, '-').toLowerCase()}`;
+                    let items = categorias[cat];
+
+                    if (termoBusca && items) {
+                        items = items.filter(p => p.nome.toLowerCase().includes(termoBusca.toLowerCase()));
+                    }
+
+                    if (items.length > 0) {
+                        const iconName = iconMap[cat] || 'package';
+                        const btn = document.createElement('button');
+                        btn.className = `filter-btn ${categoriaFiltro === cat ? 'active' : ''}`;
+                        btn.innerHTML = `<i data-lucide="${iconName}" style="width:16px; height:16px"></i> ${cat}`;
+                        btn.onclick = (e) => scrollToCategory(catId, e.currentTarget);
+                        filtroNav.appendChild(btn);
+
+                        const section = document.createElement('section');
+                        section.className = 'category-section';
+                        section.id = catId;
+                        section.innerHTML = `<h2 class="category-title"><i data-lucide="${iconName}"></i> ${cat}</h2>`;
+
+                        const grid = document.createElement('div');
+                        grid.className = 'produtos-grid';
+
+                        items.forEach(prod => {
+                            const prodData = JSON.stringify(prod).replace(/"/g, '&quot;');
+                            const itemNoCarrinho = carrinho.find(c => c.nome === prod.nome);
+                            const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
+                            const prodIcon = iconMap[prod.categoria] || 'package';
+                            const imageHTML = prod.imagem 
+                                ? `<img src="${prod.imagem}" alt="${prod.nome}">`
+                                : `<div class="card-image-placeholder"><i data-lucide="${prodIcon}"></i></div>`;
+
+                            let acaoBotao = qtd > 0 ? `
                                 <div class="card-qty-controls">
                                     <button class="btn-card-qty" onclick="alterarQuantidadeCard('${prod.nome}', -1)"><i data-lucide="minus" style="width:14px"></i></button>
                                     <span style="font-weight: 800; min-width: 20px; text-align: center;">${qtd}</span>
                                     <button class="btn-card-qty" onclick="alterarQuantidadeCard('${prod.nome}', 1)"><i data-lucide="plus" style="width:14px"></i></button>
-                                </div>`;
-                        } else {
-                            acaoBotao = `
+                                </div>` : `
                                 <button class="btn-add" style="margin: 0; padding: 8px 16px; border-radius: 12px;" onclick="adicionarAoCarrinho(${prodData})">
                                     <i data-lucide="plus" style="width: 16px; height: 16px; margin-right: 4px;"></i> Adicionar
                                 </button>`;
-                        }
-                        
-                        grid.innerHTML += `
-                            <div class="card reveal">
-                                <div class="card-image-container">
-                                    <div class="card-badges">
-                                        ${prod.tagFeatured ? '<span class="badge featured">★ Destaque</span>' : ''}
-                                        ${prod.tagVeggie ? '<span class="badge veggie">🥦 Veggie</span>' : ''}
-                                        ${prod.tagSpicy ? '<span class="badge spicy">🌶️ Picante</span>' : ''}
+                            
+                            grid.innerHTML += `
+                                <div class="card reveal">
+                                    <div class="card-image-container">
+                                        <div class="card-badges">
+                                            ${prod.tagFeatured ? '<span class="badge featured">★ Destaque</span>' : ''}
+                                            ${prod.tagVeggie ? '<span class="badge veggie">🥦 Veggie</span>' : ''}
+                                            ${prod.tagSpicy ? '<span class="badge spicy">🌶️ Picante</span>' : ''}
+                                        </div>
+                                        ${imageHTML}
                                     </div>
-                                    ${imageHTML}
-                                </div>
-                                <div class="card-content">
-                                    <h3 class="card-title">${prod.nome}</h3>
-                                    <p class="card-description">${prod.descricao || 'Sem descrição disponível.'}</p>
-                                    <div class="card-footer-row">
-                                        <span class="preco">R$ ${parseFloat(prod.preco).toFixed(2)}</span>
-                                        ${acaoBotao}
+                                    <div class="card-content">
+                                        <h3 class="card-title">${prod.nome}</h3>
+                                        <p class="card-description">${prod.descricao || 'Sem descrição disponível.'}</p>
+                                        <div class="card-footer-row">
+                                            <span class="preco">R$ ${parseFloat(prod.preco).toFixed(2)}</span>
+                                            ${acaoBotao}
+                                        </div>
                                     </div>
-                                </div>
-                            </div>`;
-                    });
-
-                    section.appendChild(grid);
-                    container.appendChild(section);
-                }
-            });
-
-            // Renderiza os ícones após inserir o HTML
-            lucide.createIcons();
+                                </div>`;
+                        });
+                        section.appendChild(grid);
+                        container.appendChild(section);
+                    }
+                });
+                lucide.createIcons();
+            } catch (error) {
+                console.error("Erro ao carregar cardápio:", error);
+                container.innerHTML = '<p class="loading">Erro ao conectar com o banco de dados.</p>';
+            }
         }
 
         function adicionarAoCarrinho(prod) {
@@ -991,7 +1044,7 @@
 
         // Removido fecharModal e closeModal daqui, pois agora usamos as funções globais do script.js
         
-        function finalizarPedido() {
+        async function finalizarPedido() {
             const nome = document.getElementById('nome-cliente').value;
             const telefone = document.getElementById('telefone-cliente').value;
             const endereco = document.getElementById('endereco-entrega').value;
@@ -1081,29 +1134,39 @@
             window.open(linkWhatsapp, '_blank');
 
             // Decrementar Estoque
-            const produtosGerais = JSON.parse(localStorage.getItem('meus_produtos')) || [];
-            carrinho.forEach(itemCart => {
-                const pIdx = produtosGerais.findIndex(pg => pg.nome === itemCart.nome);
-                if (pIdx !== -1 && produtosGerais[pIdx].estoque) {
-                    produtosGerais[pIdx].estoque = Math.max(0, parseInt(produtosGerais[pIdx].estoque) - itemCart.quantidade);
+            // Decrementar estoque no Firestore
+            const batch = db.batch();
+            for (const itemCart of carrinho) {
+                const productQuery = await db.collection('produtos')
+                                             .where('owner', '==', restauranteAtual)
+                                             .where('nome', '==', itemCart.nome)
+                                             .limit(1)
+                                             .get();
+                if (!productQuery.empty) {
+                    const productDoc = productQuery.docs[0];
+                    const currentStock = parseInt(productDoc.data().estoque || '0');
+                    batch.update(productDoc.ref, { estoque: Math.max(0, currentStock - itemCart.quantidade).toString() });
                 }
-            });
-            localStorage.setItem('meus_produtos', JSON.stringify(produtosGerais));
+            }
+            await batch.commit();
 
             // Salvar no histórico de vendas (Relatório Admin)
-            const historico = JSON.parse(localStorage.getItem('historico_vendas')) || [];
             const userLogadoAuth = JSON.parse(localStorage.getItem('usuario_logado'));
-            historico.push({
-                id: Date.now(),
-                data: new Date().toLocaleString('pt-BR'),
-                cliente: nome,
-                usuario: userLogadoAuth ? userLogadoAuth.user : null,
-                total: totalFinal,
-                restauranteOwner: restauranteAtual,
-                itens: carrinho.map(item => `${item.quantidade}x ${item.nome}`)
-            });
-            localStorage.setItem('historico_vendas', JSON.stringify(historico));
-
+            
+            try {
+                await db.collection('pedidos').add({
+                    data: new Date(), // Salvamos como objeto Date para facilitar filtros por data
+                    status: 'Pendente',
+                    cliente: nome,
+                    usuario: userLogadoAuth ? userLogadoAuth.user : null,
+                    total: totalFinal,
+                    restauranteOwner: restauranteAtual,
+                    itens: carrinho.map(item => `${item.quantidade}x ${item.nome}`)
+                });
+            } catch (error) {
+                console.error("Erro ao salvar pedido no Firestore:", error);
+            }
+            
             // Sistema de Fidelidade por Loja
             let pontosAtuais = parseFloat(localStorage.getItem(`pontos_${restauranteAtual}`)) || 0;
             localStorage.setItem(`pontos_${restauranteAtual}`, pontosAtuais + totalFinal);
@@ -1227,7 +1290,7 @@
         function atualizarStatusLoja() {
             const statusDiv = document.getElementById('status-loja');
             const fechadaManualmente = configLoja.fechada_manualmente;
-
+            
             if (fechadaManualmente) {
                 statusDiv.innerHTML = `<span class="status-badge closed">● Fechado Manualmente</span>`;
             } else if (isLojaAberta()) {
@@ -1329,21 +1392,8 @@
             }
         }
 
-        atualizarStatusLoja();
-        // Atualiza a barra se houver itens persistidos
-        atualizarTotalBarra(); 
-        carregarCuponsLoja();
-        carregarCardapio();
-        carregarBanners();
-        verificarUltimoPedido();
-        atualizarPontosUI();
-        verificarLinkDireto();
-        iniciarContagemRegressiva();
-        verificarCupomURL();
-        gerarLinkExibicao();
-        socialProofLoop();
-        iniciarSplashScreen();
-        setTimeout(verificarCarrinhoAbandonado, 5000);
+        // Chamada inicial para carregar os dados da loja e renderizar o cardápio
+        loadStoreSpecificData();
     </script>
 </body>
 </html>

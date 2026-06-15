@@ -1,23 +1,85 @@
+// --- Configuração do Firebase ---
+const firebaseConfig = {
+    apiKey: "AIzaSyC0aR0ch9fIW5NN3BG6uf9pP-6Vi2L-3F8",
+    authDomain: "cardapiodigital-ae432.firebaseapp.com",
+    projectId: "cardapiodigital-ae432",
+    storageBucket: "cardapiodigital-ae432.firebasestorage.app",
+    messagingSenderId: "937349570098",
+    appId: "1:937349570098:web:61038eab858707c388e62b",
+    measurementId: "G-PMPLZCH4P9"
+};
+
+// Inicializa o Firebase
+if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.firestore();
+    window.auth = firebase.auth();
+    window.storage = firebase.storage();
+}
+
 let editId = null; // Agora usamos ID em vez de Index para evitar erros em listas filtradas
 let currentProductStep = 1;
 
-let sessaoAtiva = JSON.parse(localStorage.getItem('usuario_logado'));
+let sessaoAtiva = null;
+try {
+    const savedSession = localStorage.getItem('usuario_logado');
+    if (savedSession) sessaoAtiva = JSON.parse(savedSession);
+} catch (e) {
+    console.error("Erro ao carregar sessão local:", e);
+    localStorage.removeItem('usuario_logado');
+}
+
+// Função auxiliar para upload no Firebase Storage
+async function uploadParaStorage(file, folder) {
+    if (!file) return null;
+    // Usamos o UID do Firebase Auth para organizar as pastas de forma segura
+    const user = firebase.auth().currentUser;
+    const pathIdentifier = user ? user.uid : (sessaoAtiva ? sessaoAtiva.user : 'anonimo');
+    const fileName = `${Date.now()}_${file.name}`;
+    const storageRef = storage.ref(`${folder}/${pathIdentifier}/${fileName}`);
+    
+    const snapshot = await storageRef.put(file);
+    const url = await snapshot.ref.getDownloadURL();
+    return url;
+}
+
+let pedidosUnsubscribe = null; // Armazena a função para parar de ouvir pedidos
+let cachePedidosAdmin = []; // Cache para evitar requisições repetidas ao filtrar
+let filtroStatusAdmin = 'Todos'; // Estado global do filtro no Admin
+let filtroDataAdmin = new Date().toISOString().split('T')[0]; // Inicializa com a data de hoje (YYYY-MM-DD)
+
+// Função auxiliar para carregar configurações da loja do Firestore
+async function getStoreConfig(ownerEmail) {
+    if (!window.db || !ownerEmail) return {};
+    try {
+        const doc = await db.collection('configuracoes').doc(ownerEmail).get();
+        return doc.exists ? doc.data() : {};
+    } catch (error) {
+        console.error("Erro ao carregar configurações da loja do Firestore:", error);
+        return {};
+    }
+}
 
 function verificarProtecaoAdmin() {
-    const isAdminPage = window.location.href.includes('admin-produtos.html');
+    const isAdminPage = window.location.pathname.includes('admin-produtos');
     if (isAdminPage) {
-        sessaoAtiva = JSON.parse(localStorage.getItem('usuario_logado'));
         if (!sessaoAtiva || sessaoAtiva.role !== 'restaurante') {
             document.body.classList.add('is-locked');
             // Abre o modal de login automaticamente se não houver restaurante logado
             setTimeout(() => { if (typeof window.abrirModalAuth === 'function') window.abrirModalAuth(); }, 500);
+        } else {
+            // Inconsistência corrigida: Remove o bloqueio se o utilizador for válido
+            document.body.classList.remove('is-locked');
         }
     }
 }
 
-function logout() {
-    localStorage.removeItem('usuario_logado');
-    window.location.reload(); 
+async function logout() {
+    // Para de ouvir pedidos ao sair
+    if (pedidosUnsubscribe) pedidosUnsubscribe();
+    await auth.signOut();
+    localStorage.removeItem('usuario_logado'); // Limpeza extra
+    window.location.href = 'index.html'; 
 }
 
 // --- Lógica Top Nav e Auth ---
@@ -28,12 +90,12 @@ window.iniciarTicker = function() {};
 window.atualizarTopoNav = function() {
     const leftSide = document.getElementById('auth-status-left');
     const pedidosBtn = document.getElementById('meus-pedidos-btn');
-    // Busca sempre a versão mais recente do localStorage
-    sessaoAtiva = JSON.parse(localStorage.getItem('usuario_logado'));
-    const userLogado = sessaoAtiva;
     
-    if (userLogado) {
-        leftSide.innerHTML = `<i data-lucide="user-check" style="color:var(--success)"></i> <span>Olá, ${userLogado.user}</span>`;
+    const userLogado = sessaoAtiva;
+
+    if (userLogado && leftSide) {
+        const userName = userLogado.user ? userLogado.user.split('@')[0] : 'Usuário';
+        leftSide.innerHTML = `<i data-lucide="user-check" style="color:var(--success)"></i> <span>${userName}</span>`;
 
         // Exibe "Meus Pedidos" se estiver logado e NÃO estiver no painel admin
         const isAdminPage = window.location.href.includes('admin-produtos.html');
@@ -42,22 +104,29 @@ window.atualizarTopoNav = function() {
         } else if (pedidosBtn) {
             pedidosBtn.style.display = 'none';
         }
-    } else {
+    } else if (leftSide) {
         leftSide.innerHTML = `<i data-lucide="user-circle"></i> <span>Entrar / Cadastrar</span>`;
         if (pedidosBtn) pedidosBtn.style.display = 'none';
     }
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 };
 
-window.abrirMeusPedidos = function() {
+window.abrirMeusPedidos = async function() {
     const userLogado = JSON.parse(localStorage.getItem('usuario_logado'));
     if (!userLogado) return;
 
-    const historico = JSON.parse(localStorage.getItem('historico_vendas')) || [];
-    const meusPedidos = historico.filter(p => p.usuario === userLogado.user);
-    
     const lista = document.getElementById('lista-meus-pedidos');
     if (!lista) return;
+
+    lista.innerHTML = '<p class="loading">Carregando seus pedidos...</p>';
+
+    const querySnapshot = await db.collection('pedidos')
+                                  .where('usuario', '==', userLogado.user)
+                                  .orderBy('data', 'desc')
+                                  .get();
+    
+    const meusPedidos = [];
+    querySnapshot.forEach(doc => meusPedidos.push(doc.data()));
 
     if (meusPedidos.length === 0) {
         lista.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 20px;">Você ainda não realizou pedidos.</p>';
@@ -65,7 +134,7 @@ window.abrirMeusPedidos = function() {
         lista.innerHTML = meusPedidos.reverse().map(p => `
             <li style="flex-direction: column; align-items: flex-start; gap: 5px;">
                 <div style="display:flex; justify-content: space-between; width: 100%;">
-                    <small style="color: var(--text-muted)">${p.data}</small>
+                    <small style="color: var(--text-muted)">${p.data.toDate().toLocaleString()}</small>
                     <b style="color:var(--success)">R$ ${parseFloat(p.total).toFixed(2)}</b>
                 </div>
                 <div style="font-size: 0.85rem; font-weight: 500;">${p.itens.join(', ')}</div>
@@ -77,7 +146,6 @@ window.abrirMeusPedidos = function() {
 };
 
 window.abrirModalAuth = function() {
-    sessaoAtiva = JSON.parse(localStorage.getItem('usuario_logado'));
     const modal = document.getElementById('modal-auth');
     const authForm = document.getElementById('form-auth-dynamic');
     const switchMode = modal.querySelector('.auth-mode-switch');
@@ -119,7 +187,6 @@ window.setAuthMode = function(mode) {
     if (!document.getElementById('btn-mode-login')) return;
     
     // Só aplica a lógica visual de troca se não estiver logado
-    if (JSON.parse(localStorage.getItem('usuario_logado'))) return;
 
     document.getElementById('btn-mode-login').classList.toggle('active', mode === 'login');
     document.getElementById('btn-mode-register').classList.toggle('active', mode === 'register');
@@ -127,48 +194,40 @@ window.setAuthMode = function(mode) {
     document.getElementById('btn-auth-submit').innerText = mode === 'login' ? 'Entrar' : 'Cadastrar agora';
 };
 
-window.processarAuth = function(e) {
+window.processarAuth = async function(e) {
     e.preventDefault();
-    const user = document.getElementById('auth-user').value;
+    const email = document.getElementById('auth-user').value;
     const pass = document.getElementById('auth-pass').value;
     const role = document.getElementById('auth-role').value;
     
-    let usuarios = JSON.parse(localStorage.getItem('usuarios_app')) || [];
+    if (!email.includes('@')) return showToast('Use um e-mail válido!', 'error');
 
-    if (currentAuthMode === 'register') {
-        if (usuarios.find(u => u.user === user)) return showToast('Usuário já existe!', 'error');
-        const novo = { user, pass, role };
-        usuarios.push(novo);
-        localStorage.setItem('usuarios_app', JSON.stringify(usuarios));
-        localStorage.setItem('usuario_logado', JSON.stringify(novo));
-        showToast('Conta criada!');
-    } else {
-        const valid = usuarios.find(u => u.user === user && u.pass === pass);
-        if (!valid) return showToast('Usuário ou senha incorretos', 'error');
-        localStorage.setItem('usuario_logado', JSON.stringify(valid));
-        showToast('Bem-vindo de volta!');
-    }
-
-    // REFORMULAÇÃO: Atualiza a sessão ativa globalmente
-    sessaoAtiva = JSON.parse(localStorage.getItem('usuario_logado'));
-
-    // Fluxo de interface após login
-    if (sessaoAtiva.role === 'restaurante') {
-        if (window.location.href.includes('admin-produtos.html')) {
-            document.body.classList.remove('is-locked');
-            closeModal('modal-auth');
-            renderizarHeaderAdmin();
-            atualizarListaAdmin();
-            atualizarRelatorio();
-            atualizarTopoNav();
+    try {
+        if (currentAuthMode === 'register') {
+            // 1. Criar usuário no Auth
+            const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+            const user = userCredential.user;
+            
+            // 2. Salvar o Role no Firestore
+            await db.collection('usuarios').doc(user.uid).set({
+                user: email,
+                role: role,
+                createdAt: new Date()
+            });
+            
+            showToast('Conta criada com sucesso!');
         } else {
-            window.location.href = 'admin-produtos.html';
+            // Login Simples
+            await auth.signInWithEmailAndPassword(email, pass);
+            showToast('Bem-vindo de volta!');
         }
-    } else {
-        closeModal('modal-auth');
-        atualizarTopoNav();
-        // Se estiver na index, atualiza pontos
-        if (typeof window.atualizarPontosUI === 'function') window.atualizarPontosUI();
+
+        // O modal será fechado e a UI atualizada automaticamente pelo onAuthStateChanged
+        // O observador onAuthStateChanged cuidará do redirecionamento
+
+    } catch (error) {
+        let msg = error.code === 'auth/user-not-found' ? 'Usuário não encontrado' : error.message;
+        return showToast(msg, 'error');
     }
 };
 
@@ -176,30 +235,63 @@ window.processarAuth = function(e) {
  * Inicialização Robusta
  */
 function inicializarSistema() {
-    // Garante que a sessão esteja sincronizada antes de qualquer lógica
-    sessaoAtiva = JSON.parse(localStorage.getItem('usuario_logado'));
+    if (!window.auth) return;
 
-    // 1. Atualiza a navegação superior (Nome do usuário, etc) em todas as páginas
+    // Garante que o login persiste ao fechar o navegador
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    
+    // Atualização imediata com cache local antes do Firebase responder
     atualizarTopoNav();
 
-    // 2. Verifica se a página atual exige login de restaurante
-    const isAdminPage = window.location.href.includes('admin-produtos.html');
-    
-    if (isAdminPage) {
-        verificarProtecaoAdmin();
-        
-        // Se estiver logado corretamente no admin, carrega os dados
-        if (sessaoAtiva && sessaoAtiva.role === 'restaurante') {
-            // Garante que o painel comece na Visão Geral
+    // Observador de Autenticação (O coração do sistema real)
+    auth.onAuthStateChanged(async (user) => {
+        const isAdminPage = window.location.pathname.includes('admin-produtos');
+
+        if (user) {
+            try {
+                const doc = await db.collection('usuarios').doc(user.uid).get();
+                const perfil = doc.data() || { role: 'comprador' };
+                sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid };
+            } catch (error) {
+                console.error("Erro ao recuperar perfil:", error);
+                sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
+            }
+
+            localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
+            if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
+            atualizarTopoNav();
+
+            // Lógica de Redirecionamento
+            if (isAdminPage) {
+                if (sessaoAtiva.role === 'restaurante') {
+                    document.body.classList.remove('is-locked');
+                } else {
+                    // Se um cliente tentar entrar no admin, mandamos de volta
+                    showToast('Acesso restrito a administradores', 'error');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                }
+            } else if (sessaoAtiva.role === 'restaurante') {
+                // Se o dono logar na index, sugerimos ir para o painel
+                if (confirm('Deseja aceder ao Painel Administrativo?')) {
+                    window.location.href = 'admin-produtos.html';
+                }
+            }
+        } else {
+            sessaoAtiva = null;
+            localStorage.removeItem('usuario_logado');
+            atualizarTopoNav();
+            if (isAdminPage) verificarProtecaoAdmin();
+        }
+
+        // Renderização de dados do Admin
+        if (sessaoAtiva && sessaoAtiva.role === 'restaurante' && window.location.href.includes('admin-produtos.html')) {
             showSection('dashboard');
-            
-            // Popula os dados do restaurante
             renderizarHeaderAdmin();
             atualizarListaAdmin();
             atualizarRelatorio();
             atualizarSelectCategorias();
         }
-    }
+    });
 }
 
 // Centraliza a inicialização apenas no carregamento do DOM para evitar erros de referência nula
@@ -279,15 +371,25 @@ window.showSection = function(sectionId) {
     lucide.createIcons();
 }
 
-function carregarLeads() {
-    if (!sessaoAtiva || !sessaoAtiva.user) return [];
-    return JSON.parse(localStorage.getItem(`leads_${sessaoAtiva.user}`)) || [];
+// Migrando carregarLeads para Firestore
+async function carregarLeads() {
+    if (!sessaoAtiva || !sessaoAtiva.user || !window.db) return [];
+    try {
+        const querySnapshot = await db.collection('leads')
+                                      .where('restauranteOwner', '==', sessaoAtiva.user)
+                                      .get();
+        const leads = [];
+        querySnapshot.forEach(doc => leads.push(doc.data()));
+        return leads;
+    } catch (error) {
+        console.error("Erro ao carregar leads do Firestore:", error);
+        return [];
+    }
 }
 
-function carregarConfiguracoesRestaurante() {
-    if (!sessaoAtiva || !sessaoAtiva.user) return {};
-    const todasConfigs = JSON.parse(localStorage.getItem('configs_restaurantes')) || {};
-    return todasConfigs[sessaoAtiva.user] || {};
+// Atualizando carregarConfiguracoesRestaurante para usar a nova função getStoreConfig
+async function carregarConfiguracoesRestaurante() {
+    return await getStoreConfig(sessaoAtiva.user);
 }
 
 function showToast(message, type = 'success') {
@@ -316,19 +418,26 @@ const toBase64 = file => new Promise((resolve, reject) => {
 });
 
 // Carregar e mostrar produtos para o admin
-function atualizarListaAdmin() {
-    if (!sessaoAtiva || sessaoAtiva.role !== 'restaurante') return;
+async function atualizarListaAdmin() {
+    if (!sessaoAtiva || sessaoAtiva.role !== 'restaurante' || !window.db) return;
     
     const listaAdmin = document.getElementById('lista-admin');
     if (!listaAdmin) return;
 
-    const produtosGlobais = JSON.parse(localStorage.getItem('meus_produtos')) || [];
-    // Filtra apenas os produtos que pertencem ao restaurante logado
-    const meusProdutos = produtosGlobais.filter(p => p.owner === sessaoAtiva.user);
-    
-    listaAdmin.innerHTML = '';
+    try {
+        // Busca apenas os produtos onde o campo 'owner' é igual ao usuário logado
+        const querySnapshot = await db.collection('produtos')
+                                      .where('owner', '==', sessaoAtiva.user)
+                                      .get();
+        
+        const meusProdutos = [];
+        querySnapshot.forEach(doc => {
+            meusProdutos.push({ ...doc.data(), id: doc.id });
+        });
 
-    meusProdutos.forEach((prod) => {
+        listaAdmin.innerHTML = '';
+
+        meusProdutos.forEach((prod) => {
         const iconName = window.iconMap[prod.categoria] || 'package';
         const imageContent = prod.imagem 
             ? `<img src="${prod.imagem}" style="width:100%; height:180px; object-fit:cover; border-radius:8px;">`
@@ -366,6 +475,10 @@ function atualizarListaAdmin() {
         `;
         listaAdmin.appendChild(card);
     });
+    } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+        showToast('Erro ao carregar lista do banco', 'error');
+    }
     lucide.createIcons();
 }
 
@@ -397,16 +510,23 @@ document.addEventListener('submit', async (e) => {
     if (e.target.id !== 'cadastroProdutoForm') return;
     e.preventDefault();
     
-    const arquivoImagem = document.getElementById('imagem').files[0];
+    showToast('Salvando produto...', 'info');
+    
+    const fileInput = document.getElementById('imagem');
+    const arquivoImagem = fileInput.files[0];
     let imagemData = document.getElementById('imagemBase64').value;
 
-    // Se um novo arquivo foi selecionado, converte ele
-    if (arquivoImagem) {
-        imagemData = await toBase64(arquivoImagem);
+    try {
+        // Se um novo arquivo foi selecionado, faz upload para o Storage
+        if (arquivoImagem) {
+            imagemData = await uploadParaStorage(arquivoImagem, 'produtos');
+        }
+    } catch (err) {
+        console.error("Erro no upload da imagem:", err);
+        return showToast('Erro ao subir imagem', 'error');
     }
-    
+
     const novoProduto = {
-        id: editId || Date.now().toString(), // Mantém o ID ou cria um novo
         owner: sessaoAtiva.user, // Atrela o produto ao restaurante logado
         nome: document.getElementById('nome').value,
         preco: document.getElementById('preco').value,
@@ -422,34 +542,38 @@ document.addEventListener('submit', async (e) => {
         tagFeatured: document.getElementById('tagFeatured').checked
     };
 
-    let produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
-    
-    if (!editId) {
-        // Modo de Cadastro
-        produtos.push(novoProduto);
-        showToast('Produto cadastrado com sucesso!');
-    } else {
-        // Modo de Edição
-        const indexGlobal = produtos.findIndex(p => p.id === editId);
-        if (indexGlobal !== -1) produtos[indexGlobal] = novoProduto;
-        editId = null; 
-        document.getElementById('btnSalvar').innerText = 'Cadastrar Produto';
-        showToast('Produto atualizado com sucesso!');
+    try {
+        if (!editId) {
+            // Firestore gera o ID automaticamente
+            const docRef = await db.collection('produtos').add(novoProduto);
+            // Opcional: Salva o ID gerado dentro do próprio objeto para facilitar filtros
+            await docRef.update({ id: docRef.id });
+            showToast('Produto salvo no Firestore!');
+        } else {
+            // Modo de Edição: Atualiza documento específico
+            await db.collection('produtos').doc(editId).set(novoProduto, { merge: true });
+            editId = null; 
+            document.getElementById('btnSalvar').innerText = 'Cadastrar Produto';
+            showToast('Produto atualizado!');
+        }
+
+        e.target.reset();
+        document.getElementById('imagemBase64').value = '';
+        await atualizarListaAdmin(); // Agora é uma chamada assíncrona
+        closeModal('modal-produto');
+    } catch (error) {
+        console.error("Erro ao salvar:", error);
+        showToast('Erro ao conectar com o banco de dados', 'error');
     }
-
-    localStorage.setItem('meus_produtos', JSON.stringify(produtos));
-
-    e.target.reset();
-    document.getElementById('imagemBase64').value = '';
-    atualizarListaAdmin();
-    closeModal('modal-produto');
 });
 
 // Função para carregar dados no formulário para edição
-window.editarProduto = function(id) {
-    const produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
-    const prod = produtos.find(p => p.id === id);
-
+window.editarProduto = async function(id) {
+    // Busca o produto específico no Firestore para garantir dados atualizados
+    const doc = await db.collection('produtos').doc(id).get();
+    if (!doc.exists) return;
+    const prod = doc.data();
+    
     if (!prod) return;
 
     document.getElementById('nome').value = prod.nome;
@@ -483,32 +607,94 @@ window.editarProduto = function(id) {
     openModal('modal-produto');
 };
 
-window.promptNovaCategoria = function() {
+window.promptNovaCategoria = async function() {
     const nova = prompt("Digite o nome da nova categoria:");
     if (nova && nova.trim() !== "") {
-        const todasConfigs = JSON.parse(localStorage.getItem('configs_restaurantes')) || {};
-        const config = todasConfigs[sessaoAtiva.user] || {};
-        
-        let existentes = config.categorias_custom || "";
-        if (existentes.includes(nova)) return showToast("Esta categoria já existe!", "error");
-        
-        config.categorias_custom = existentes ? `${existentes}, ${nova}` : nova;
-        todasConfigs[sessaoAtiva.user] = config;
-        
-        localStorage.setItem('configs_restaurantes', JSON.stringify(todasConfigs));
-        atualizarSelectCategorias();
-        document.getElementById('categoria').value = nova;
-        showToast(`Categoria "${nova}" adicionada!`);
+        try {
+            const config = await carregarConfiguracoesRestaurante(); // Carrega do Firestore
+            let existentes = config.categorias_custom ? config.categorias_custom.split(',').map(c => c.trim()) : [];
+            if (existentes.includes(nova)) return showToast("Esta categoria já existe!", "error");
+            existentes.push(nova);
+            
+            await db.collection('configuracoes').doc(sessaoAtiva.user).set({ categorias_custom: existentes.join(', ') }, { merge: true });
+            await atualizarSelectCategorias();
+            document.getElementById('categoria').value = nova;
+            showToast(`Categoria "${nova}" adicionada!`);
+        } catch (error) {
+            showToast("Erro ao adicionar categoria", "error");
+        }
     }
 };
 
 // Relatório de Vendas
 function atualizarRelatorio() {
     if (!sessaoAtiva) return;
+    if (pedidosUnsubscribe) return; // Evita criar múltiplos listeners
 
-    const historicoGlobal = JSON.parse(localStorage.getItem('historico_vendas')) || [];
-    const meuHistorico = historicoGlobal.filter(venda => venda.restauranteOwner === sessaoAtiva.user);
+    // Define a data inicial no input (hoje)
+    const inputData = document.getElementById('filtro-data-admin');
+    if (inputData) inputData.value = filtroDataAdmin;
 
+    let isFirstLoad = true;
+
+    // Configura o Listener em Tempo Real
+    pedidosUnsubscribe = db.collection('pedidos')
+        .where('restauranteOwner', '==', sessaoAtiva.user)
+        .orderBy('data', 'desc')
+        .onSnapshot(snapshot => {
+            cachePedidosAdmin = [];
+            snapshot.forEach(doc => cachePedidosAdmin.push({ ...doc.data(), id: doc.id }));
+
+            // Tocar som e mostrar toast se for um novo pedido (não no carregamento inicial)
+            if (!isFirstLoad) {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        // Som de notificação (opcional)
+                        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+                        showToast("Novo pedido recebido! 🔔", "info");
+                    }
+                });
+            }
+            isFirstLoad = false;
+            aplicarFiltroEPublicar();
+        }, error => {
+            console.error("Erro ao ouvir pedidos:", error);
+            showToast("Erro ao conectar ao monitor de pedidos", "error");
+        });
+}
+
+window.filtrarPedidosAdmin = function(status) {
+    filtroStatusAdmin = status;
+    aplicarFiltroEPublicar();
+};
+
+window.filtrarDataAdmin = function(data) {
+    filtroDataAdmin = data;
+    aplicarFiltroEPublicar();
+};
+
+function aplicarFiltroEPublicar() {
+    let filtrados = cachePedidosAdmin;
+
+    // Filtro de Status
+    if (filtroStatusAdmin !== 'Todos') {
+        filtrados = filtrados.filter(p => p.status === filtroStatusAdmin);
+    }
+
+    // Filtro de Data
+    if (filtroDataAdmin) {
+        filtrados = filtrados.filter(p => {
+            if (!p.data || !p.data.toDate) return false;
+            const dataPedido = p.data.toDate().toISOString().split('T')[0];
+            return dataPedido === filtroDataAdmin;
+        });
+    }
+
+    renderizarRelatorioUI(filtrados);
+}
+
+// Função auxiliar para renderizar a interface do relatório
+function renderizarRelatorioUI(meuHistorico) {
     const totalPedidos = meuHistorico.length;
     const totalFaturamento = meuHistorico.reduce((sum, pedido) => sum + pedido.total, 0);
 
@@ -517,21 +703,24 @@ function atualizarRelatorio() {
 
     const listaPedidos = document.getElementById('lista-pedidos-historico');
     if (listaPedidos) {
-        if (meuHistorico.length === 0) {
-            listaPedidos.innerHTML = '<p class="loading">Nenhum pedido registrado ainda.</p>';
-            return;
-        }
         let html = '<div style="overflow-x: auto;"><table style="width:100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm);">';
-        html += '<tr style="background: #f8fafc; text-align: left;"><th style="padding:12px;">Data</th><th style="padding:12px;">Cliente</th><th style="padding:12px;">Itens</th><th style="padding:12px;">Total</th><th style="padding:12px;">Ações</th></tr>';
+        html += '<tr style="background: #f8fafc; text-align: left;"><th style="padding:12px;">Data</th><th style="padding:12px;">Cliente</th><th style="padding:12px;">Itens</th><th style="padding:12px;">Total</th><th style="padding:12px;">Status</th><th style="padding:12px;">Ações</th></tr>';
         
-        // Mostrar os últimos 10 pedidos
-        meuHistorico.slice(-10).reverse().forEach(ped => {
+        meuHistorico.slice(0, 15).forEach(ped => {
+            const statusOptions = ['Pendente', 'Em Preparo', 'Saiu para Entrega', 'Entregue', 'Cancelado'];
+            const selectHtml = `
+                <select onchange="alterarStatusPedido('${ped.id}', this.value)" style="padding: 4px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.8rem; background: ${ped.status === 'Cancelado' ? '#fee2e2' : '#f0fdf4'};">
+                    ${statusOptions.map(opt => `<option value="${opt}" ${ped.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>
+            `;
+
             html += `<tr style="border-top: 1px solid #f1f5f9;">
-                <td style="padding:12px; font-size: 0.85rem;">${ped.data}</td>
+                <td style="padding:12px; font-size: 0.85rem;">${ped.data && ped.data.toDate ? ped.data.toDate().toLocaleString() : '---'}</td>
                 <td style="padding:12px; font-weight: bold;">${ped.cliente}</td>
                 <td style="padding:12px; font-size: 0.85rem; color: var(--text-muted);">${ped.itens.join(', ')}</td>
                 <td style="padding:12px; font-weight: bold; color: var(--success);">R$ ${parseFloat(ped.total).toFixed(2)}</td>
-                <td style="padding:12px;"><button onclick="imprimirPedido(${ped.id})" class="btn-print">🖨️ Imprimir</button></td>
+                <td style="padding:12px;">${selectHtml}</td>
+                <td style="padding:12px;"><button onclick="imprimirPedidoFirestore('${ped.id}')" class="btn-print">🖨️ Imprimir</button></td>
             </tr>`;
         });
         html += '</table></div>';
@@ -539,10 +728,52 @@ function atualizarRelatorio() {
     }
 }
 
-window.imprimirPedido = function(id) {
-    const historico = JSON.parse(localStorage.getItem('historico_vendas')) || [];
-    const ped = historico.find(p => p.id === id);
-    if (!ped) return;
+window.alterarStatusPedido = async function(docId, novoStatus) {
+    try {
+        // 1. Atualizar o status no Firestore
+        await db.collection('pedidos').doc(docId).update({
+            status: novoStatus
+        });
+        showToast(`Status atualizado: ${novoStatus}`);
+
+        // 2. Buscar detalhes do pedido para enviar a mensagem
+        const pedidoDoc = await db.collection('pedidos').doc(docId).get();
+        if (!pedidoDoc.exists) {
+            console.error("Pedido não encontrado para enviar mensagem.");
+            return;
+        }
+        const pedido = pedidoDoc.data();
+
+        // 3. Buscar configurações do restaurante para o nome de exibição
+        const configRestaurante = await getStoreConfig(pedido.restauranteOwner);
+        const nomeRestaurante = configRestaurante.nome_exibicao || pedido.restauranteOwner.split('@')[0].toUpperCase();
+
+        // 4. Construir a mensagem
+        const clienteNome = pedido.cliente || "Cliente";
+        const clienteTelefone = pedido.telefone; // O telefone do cliente já está salvo no pedido
+
+        if (!clienteTelefone) {
+            showToast("Telefone do cliente não disponível para enviar mensagem.", "error");
+            return;
+        }
+
+        const mensagem = `Olá ${clienteNome}! 👋%0ASeu pedido *#${docId.slice(-6)}* no *${nomeRestaurante}* agora está com o status: *${novoStatus}*.%0A%0AQualquer dúvida, entre em contato!`;
+
+        // 5. Abrir o WhatsApp (com confirmação)
+        if (confirm(`Deseja enviar uma mensagem automática para ${clienteNome} (${clienteTelefone}) sobre a mudança de status para "${novoStatus}"?`)) {
+            const linkWhatsapp = `https://wa.me/${clienteTelefone}?text=${mensagem}`;
+            window.open(linkWhatsapp, '_blank');
+        }
+    } catch (error) {
+        console.error("Erro ao atualizar status:", error);
+        showToast("Erro ao atualizar status", "error");
+    }
+};
+
+window.imprimirPedidoFirestore = async function(docId) {
+    const doc = await db.collection('pedidos').doc(docId).get();
+    if (!doc.exists) return;
+    const ped = doc.data();
 
     const janelaImpressao = window.open('', '', 'width=350,height=600');
     janelaImpressao.document.write(`
@@ -551,8 +782,8 @@ window.imprimirPedido = function(id) {
             <body style="font-family: 'Courier New', monospace; padding: 5mm; width: 80mm; font-size: 13px; line-height: 1.2;">
                 <div style="text-align:center; font-weight:bold; font-size: 16px;">*** MEU RESTAURANTE ***</div>
                 <div style="text-align:center; margin-bottom: 5px;">-------------------------------</div>
-                <div><b>PEDIDO:</b> #${ped.id.toString().slice(-4)}</div>
-                <div><b>DATA:</b> ${ped.data}</div>
+                <div><b>ID:</b> #${docId.slice(-6)}</div>
+                <div><b>DATA:</b> ${ped.data.toDate().toLocaleString()}</div>
                 <div><b>CLIENTE:</b> ${ped.cliente}</div>
                 <div style="margin: 5px 0;">-------------------------------</div>
                 <div style="font-weight:bold; text-align:center;">ITENS DO PEDIDO</div>
@@ -569,10 +800,15 @@ window.imprimirPedido = function(id) {
     janelaImpressao.close();
 };
 
-window.limparHistoricoVendas = function() {
+window.limparHistoricoVendas = async function() {
     if(confirm('Deseja realmente zerar o relatório de vendas?')) {
-        localStorage.removeItem('historico_vendas');
-        atualizarRelatorio();
+        try {
+            const batch = db.batch();
+            const querySnapshot = await db.collection('pedidos').where('restauranteOwner', '==', sessaoAtiva.user).get();
+            querySnapshot.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            await atualizarRelatorio();
+        } catch (error) { console.error("Erro ao limpar histórico:", error); showToast('Erro ao limpar histórico', 'error'); }
         showToast('Relatório zerado.');
     }
 }
@@ -642,50 +878,52 @@ window.handleInlineImageUpload = async function(input, campo) {
     if (!file) return;
 
     try {
-        const base64 = await toBase64(file);
-        const todasConfigs = JSON.parse(localStorage.getItem('configs_restaurantes')) || {};
-        const config = todasConfigs[sessaoAtiva.user] || {};
-
-        config[campo] = base64;
-        todasConfigs[sessaoAtiva.user] = config;
+        showToast('Fazendo upload da imagem...', 'info');
+        const url = await uploadParaStorage(file, 'loja');
         
-        localStorage.setItem('configs_restaurantes', JSON.stringify(todasConfigs));
+        // Atualiza diretamente no Firestore
+        await db.collection('configuracoes').doc(sessaoAtiva.user).set({
+            [campo]: url
+        }, { merge: true });
+
         showToast('Imagem atualizada!');
+        // Recarrega o header para mostrar a nova imagem
         renderizarHeaderAdmin();
     } catch (err) {
         showToast('Erro ao carregar imagem', 'error');
     }
 };
 
-function salvarConfigRapida(campo, valor) {
-    const todasConfigs = JSON.parse(localStorage.getItem('configs_restaurantes')) || {};
-    const config = todasConfigs[sessaoAtiva.user] || {};
-
-    if (campo === 'nome') config.nome_exibicao = valor;
-    if (campo === 'descricao') config.descricao_loja = valor;
-    if (campo === 'tempo') {
-        // Garante que salve com o sufixo "min" apenas se o usuário não digitar
-        let val = valor.toLowerCase().includes('min') ? valor : valor + ' min';
-        config.tempo_entrega = val;
-    }
-    if (campo === 'horario') {
-        // Tenta quebrar "18h - 23h" ou "18-23"
-        const partes = valor.replace(/h/g, '').split(/[-–]/);
-        if (partes.length === 2) {
-            config.abertura = partes[0].trim();
-            config.fechamento = partes[1].trim();
+window.salvarConfigRapida = async function(campo, valor) {
+    try {
+        const config = await carregarConfiguracoesRestaurante();
+        
+        if (campo === 'nome') config.nome_exibicao = valor;
+        if (campo === 'descricao') config.descricao_loja = valor;
+        if (campo === 'tempo') {
+            let val = valor.toLowerCase().includes('min') ? valor : valor + ' min';
+            config.tempo_entrega = val;
         }
+        if (campo === 'horario') {
+            const partes = valor.replace(/h/g, '').split(/[-–]/);
+            if (partes.length === 2) {
+                config.abertura = partes[0].trim();
+                config.fechamento = partes[1].trim();
+            }
+        }
+
+        await db.collection('configuracoes').doc(sessaoAtiva.user).set(config, { merge: true });
+        showToast('Atualizado!');
+        renderizarHeaderAdmin(); // Recarrega o header
+    } catch (error) {
+        showToast("Erro ao atualizar configuração", "error");
     }
+};
 
-    todasConfigs[sessaoAtiva.user] = config;
-    localStorage.setItem('configs_restaurantes', JSON.stringify(todasConfigs));
-    showToast('Atualizado!');
-}
-
-function renderizarHeaderAdmin() {
+async function renderizarHeaderAdmin() {
     if (!sessaoAtiva || sessaoAtiva.role !== 'restaurante') return;
-    
-    const config = carregarConfiguracoesRestaurante();
+
+    const config = await carregarConfiguracoesRestaurante(); // Carrega do Firestore
     const nomeEl = document.getElementById('admin-nome-loja');
     if (!nomeEl) return; // Segurança para não rodar fora da página admin
 
@@ -726,8 +964,10 @@ window.copiarLinkLoja = function() {
 };
 
 // Lógica para Configurações da Loja (Integrada ao Script Principal)
-const configForm = document.getElementById('configLojaForm');
-if (configForm) {
+document.addEventListener('DOMContentLoaded', async () => {
+    const configForm = document.getElementById('configLojaForm');
+    if (!configForm) return;
+
     const lojaFechadaManualmente = document.getElementById('lojaFechadaManualmente');
     const inputFreteGratis = document.getElementById('inputFreteGratis');
     const inputPedidoMinimo = document.getElementById('inputPedidoMinimo');
@@ -737,15 +977,15 @@ if (configForm) {
     const inputCupons = document.getElementById('inputCupons');
     const inputCategoriasCustom = document.getElementById('inputCategoriasCustom');
     const inputBanners = document.getElementById('inputBanners');
-    const inputLogo = document.getElementById('inputLogo');
+    const inputLogo = document.getElementById('inputLogo'); // Input de arquivo para logo
 
-    const configAtual = carregarConfiguracoesRestaurante();
+    const configAtual = await carregarConfiguracoesRestaurante();
 
     // Carregar valores iniciais
     if (configAtual.logo && document.getElementById('logo-admin')) {
         const logoAdmin = document.getElementById('logo-admin');
         logoAdmin.src = configAtual.logo;
-        logoAdmin.style.display = 'block';
+        logoAdmin.style.display = 'block'; // Garante que a logo seja exibida
     }
     
     inputFreteGratis.value = configAtual.frete_gratis_valor || "";
@@ -773,30 +1013,31 @@ if (configForm) {
 
         const arquivoLogo = inputLogo.files[0];
         if (arquivoLogo) {
-            novasConfigs.logo = await toBase64(arquivoLogo);
+            showToast('Fazendo upload da logo...', 'info');
+            novasConfigs.logo = await uploadParaStorage(arquivoLogo, 'loja');
         }
         
         const arquivosBanners = document.getElementById('inputBanners').files;
         if (arquivosBanners.length > 0) {
-            const promises = Array.from(arquivosBanners).map(file => toBase64(file));
+            showToast('Fazendo upload dos banners...', 'info');
+            const promises = Array.from(arquivosBanners).map(file => uploadParaStorage(file, 'banners'));
             novasConfigs.banners = await Promise.all(promises);
         }
-        
-        const todasConfigs = JSON.parse(localStorage.getItem('configs_restaurantes')) || {};
-        todasConfigs[sessaoAtiva.user] = novasConfigs;
-        localStorage.setItem('configs_restaurantes', JSON.stringify(todasConfigs));
+
+        // Salva as configurações no Firestore
+        await db.collection('configuracoes').doc(sessaoAtiva.user).set(novasConfigs, { merge: true });
 
         showToast('Configurações salvas!');
-        renderizarHeaderAdmin();
-        atualizarSelectCategorias();
+        await renderizarHeaderAdmin(); // Recarrega o header com as novas configs
+        await atualizarSelectCategorias(); // Atualiza as categorias no select
     });
-}
+});
 
-function atualizarSelectCategorias() {
+async function atualizarSelectCategorias() {
     const select = document.getElementById('categoria');
     if (!select) return;
     
-    const config = carregarConfiguracoesRestaurante();
+    const config = await carregarConfiguracoesRestaurante(); // Carrega do Firestore
     const categoriasPadrao = ['Lanches', 'Pizzas', 'Acompanhamentos', 'Bebidas', 'Sobremesas', 'Outros'];
     const customStr = config.categorias_custom || "";
     const custom = customStr.split(',').map(c => c.trim()).filter(c => c !== "");
@@ -809,11 +1050,14 @@ function atualizarSelectCategorias() {
 }
 
 // Excluir produto
-window.excluirProduto = function(id) {
+window.excluirProduto = async function(id) {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
-        let produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
-        produtos = produtos.filter(p => p.id !== id);
-        localStorage.setItem('meus_produtos', JSON.stringify(produtos));
-        atualizarListaAdmin();
+        try {
+            await db.collection('produtos').doc(id).delete();
+            showToast('Produto removido com sucesso!');
+            await atualizarListaAdmin();
+        } catch (error) {
+            showToast('Erro ao excluir do banco', 'error');
+        }
     }
 };

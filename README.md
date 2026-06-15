@@ -21,8 +21,8 @@ Um sistema completo de cardápio digital para restaurantes, com foco em simplici
 ## 🚀 Como usar
 
 1. Clone o repositório.
-2. Abra o arquivo `login.html` para criar sua conta de administrador.
-3. Após o login, você será redirecionado para o `admin-produtos.html` para configurar sua loja.
+2. Abra o arquivo `index.html` e use o botão "Entrar / Cadastrar" no topo para criar sua conta.
+3. Após o login como restaurante, você será redirecionado para o Painel Admin.
 4. O link para os clientes acessarem o cardápio será exibido no dashboard do painel.
 
 ## 🛠️ Tecnologias
