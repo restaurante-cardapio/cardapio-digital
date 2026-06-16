@@ -140,7 +140,7 @@ window.abrirMeusPedidos = async function() {
     if (meusPedidos.length === 0) {
         lista.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 20px;">Você ainda não realizou pedidos.</p>';
     } else {
-        lista.innerHTML = meusPedidos.reverse().map(p => `
+        lista.innerHTML = meusPedidos.map(p => `
             <li style="flex-direction: column; align-items: flex-start; gap: 5px;">
                 <div style="display:flex; justify-content: space-between; width: 100%;">
                     <small style="color: var(--text-muted)">${p.data.toDate().toLocaleString()}</small>
@@ -360,13 +360,14 @@ window.processarAuth = async function(e) {
         if (!name || !phone) return showToast('Preencha Nome e Telefone!', 'error');
 
         try {
-            showToast('Criando sua conta...', 'info');
+            window.isProcessingRegistration = true; // Trava o observador de login
+            showToast('Criando conta no sistema...', 'info');
             const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
             const user = userCredential.user;
             
-            // Lógica Unificada: Primeiro criamos o documento de usuário para todos
+            // 1. Salva Perfil de Usuário
             await db.collection('usuarios').doc(user.uid).set({
-                email: email,
+                user: email,
                 role: role,
                 name: name,
                 phone: phone,
@@ -374,30 +375,33 @@ window.processarAuth = async function(e) {
             });
 
             if (role === 'restaurante') {
+                showToast('Configurando seu restaurante...', 'info');
                 const open = document.getElementById('auth-open').value || "18";
                 const close = document.getElementById('auth-close').value || "23";
                 const logoFile = document.getElementById('auth-logo').files[0];
                 let logoUrl = logoFile ? await uploadParaStorage(logoFile, 'loja') : "";
                 
-                // Gera o slug baseado no nome da loja
                 const slug = gerarSlug(name);
 
+                // 2. Salva Configurações da Loja
                 await db.collection('configuracoes').doc(email).set({
                     nome_exibicao: name,
                     whatsapp: phone.replace(/\D/g, ""),
                     abertura: open,
                     fechamento: close,
                     logo: logoUrl,
-                    slug: slug
+                    slug: slug,
+                    owner: email
                 }, { merge: true });
             }
 
-            // Finalização do processo
+            // 3. Define Sessão e Finaliza
+            sessaoAtiva = { user: email, role: role, uid: user.uid, name: name };
+            localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
             window.limparRegisterPreview();
             
             if (role === 'restaurante') {
-                showToast('Conta e restaurante criados com sucesso!');
-                // Forçamos o redirecionamento manual para garantir
+                showToast('Tudo pronto! Entrando no painel...');
                 window.isProcessingRegistration = false;
                 window.location.href = 'admin-produtos.html';
             } else {
@@ -510,31 +514,28 @@ function inicializarSistema() {
         // Observador de Autenticação Centralizado
         auth.onAuthStateChanged(async (user) => {
             const isAdminPage = window.location.pathname.includes('admin-produtos');
-
-            // Ignora o observador se o sistema estiver no meio de um cadastro
-            if (window.isProcessingRegistration) return;
+            if (window.isProcessingRegistration) return; // Não interfere no cadastro
 
             if (user) {
                 try {
-                    // Polling: Tenta buscar o perfil no Firestore por até 5 segundos
                     let perfil = null;
+                    // Tenta buscar o perfil por até 5 segundos (útil para novas contas)
                     for (let i = 0; i < 10; i++) {
                         const doc = await db.collection('usuarios').doc(user.uid).get();
                         if (doc.exists) {
                             perfil = doc.data();
                             break;
                         }
-                        await new Promise(res => setTimeout(res, 500)); // Espera 500ms
+                        await new Promise(res => setTimeout(res, 500));
                     }
 
                     if (perfil) {
-                        sessaoAtiva = { user: user.email, role: perfil.role || 'comprador', uid: user.uid, name: perfil.name };
+                        sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
                     } else {
                         sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
                     }
                     localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
                 } catch (error) {
-                    console.error("Erro ao recuperar perfil:", error);
                     sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
                     localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
                 }
@@ -543,6 +544,7 @@ function inicializarSistema() {
                 atualizarTopoNav();
 
                 if (isAdminPage) {
+                    // Se caiu na página admin mas não é restaurante, volta pro início
                     if (sessaoAtiva.role !== 'restaurante') {
                         window.location.href = 'index.html';
                         return;
@@ -553,7 +555,7 @@ function inicializarSistema() {
                     atualizarListaAdmin();
                     atualizarRelatorio();
                     atualizarSelectCategorias();
-                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage && !window.isProcessingRegistration) {
+                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage) {
                     if (confirm('Você está logado como restaurante. Deseja ir para o Painel Administrativo?')) {
                         window.location.href = 'admin-produtos.html';
                     }
