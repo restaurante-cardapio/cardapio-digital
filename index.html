@@ -453,15 +453,15 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Firebase SDKs (Versão Compat) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
-    <!-- Biblioteca de Ícones Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <script src="script.js"></script>
+
     <script>
         // Identificação da Loja via URL
         window.urlParams = new URLSearchParams(window.location.search);
@@ -1513,10 +1513,8 @@
         // Event listener para o tipo de pedido
         document.getElementById('tipo-pedido-toggle').addEventListener('change', toggleEnderecoField);
 
-        function filtrar(cat, event) {
-            const termo = document.getElementById('inputBusca').value;
-            
-            // Remove a classe 'active' de todos os botões de filtro
+function filtrar(cat, event) {
+            let termo = document.getElementById('inputBusca').value;
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             
             if (event && event.currentTarget) {
@@ -1527,7 +1525,7 @@
             carregarCardapio(cat, termo);
         }
 
-        function carregarBanners() {
+function carregarBanners() {
             const listaBanners = configLoja.banners || [];
             const container = document.getElementById('banner-carousel');
             if (listaBanners.length === 0) {
@@ -1541,7 +1539,7 @@
             container.style.display = 'flex';
         }
 
-        function verificarLinkDireto() {
+function verificarLinkDireto() {
             const params = new URLSearchParams(window.location.search);
             const produtoDesejado = params.get('produto');
             if (produtoDesejado) {
