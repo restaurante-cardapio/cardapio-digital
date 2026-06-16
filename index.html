@@ -7,6 +7,17 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Splash Screen Criativa -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-content">
+            <div class="shop-animate-icon">
+                <i data-lucide="utensils-crossed"></i>
+            </div>
+            <div class="splash-loader"></div>
+            <p id="splash-phrase" class="splash-phrase">Carregando sabor...</p>
+        </div>
+    </div>
+
     <!-- Top Nav Dinâmica -->
     <nav class="top-nav">
         <div class="top-nav-left">
@@ -80,33 +91,25 @@
             </div>
 
             <div id="cardapio-secoes">
-                <!-- Skeleton Screen Inicial -->
-                <div class="produtos-grid">
-                    <div class="card skeleton-card">
-                        <div class="skeleton" style="width: 100%; height: 180px; border-radius: 12px; margin-bottom: 12px;"></div>
-                        <div class="skeleton" style="width: 60%; height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
-                        <div class="skeleton" style="width: 90%; height: 14px; border-radius: 4px; margin-bottom: 15px;"></div>
-                    </div>
-                </div>
             </div>
         </main>
 
         <!-- Rodapé do Total -->
         <div class="cart-footer">
-            <div style="flex: 1;">
-                <div id="frete-info" style="font-size: 0.75rem; margin-bottom: 4px;"></div>
+            <div class="cart-footer-info">
+                <div id="frete-info" class="cart-frete-text"></div>
                 <div class="shipping-progress-container" id="frete-progress-cont" style="display:none;">
                     <div class="shipping-progress-bar" id="frete-progress-bar" style="width: 0%"></div>
                 </div>
-                <div style="margin-top: 5px;">
-                    <strong>Total: R$ <span id="total-valor">0.00</span></strong>
+                <div class="cart-total-display">
+                    <strong> R$ <span id="total-valor">0.00</span></strong>
                 </div>
             </div>
             <div class="cart-icon-container">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                <i data-lucide="shopping-bag" style="width: 22px; height: 22px;"></i>
                 <span id="cart-count" class="cart-count-badge">0</span>
             </div>
-            <button onclick="abrirResumo()" style="background: var(--primary-color); color: white; border: none; padding: 14px 28px; border-radius: 100px; cursor: pointer; font-weight: 800; margin-left: 10px; box-shadow: 0 10px 20px rgba(var(--primary-color-rgb), 0.3);">Ver Sacola</button>
+            <button onclick="abrirResumo()" class="btn-cart-action">Ver Sacola</button>
         </div>
     </div>
 
@@ -241,9 +244,9 @@
                         <div class="form-group">
                             <label>Horário (Abertura e Fechamento)</label>
                             <div style="display:flex; gap:10px; align-items:center;">
-                                <input type="number" id="auth-open" placeholder="18" style="flex:1">
+                                <input type="number" id="auth-open" placeholder="18" min="0" max="23" style="flex:1">
                                 <span>às</span>
-                                <input type="number" id="auth-close" placeholder="23" style="flex:1">
+                                <input type="number" id="auth-close" placeholder="23" min="0" max="23" style="flex:1">
                             </div>
                         </div>
                         <div class="form-group">
@@ -509,11 +512,14 @@
 
                 // Carregar Configurações Específicas desta Loja do Firestore
                 configLoja = await getStoreConfig(restauranteAtual);
+                console.log("Configurações da Loja Carregadas:", configLoja);
 
-                if (configLoja.logo) {
+                if (configLoja && configLoja.logo) {
                     const logoImg = document.getElementById('logo-restaurante');
                     logoImg.src = configLoja.logo;
                     logoImg.style.display = 'block';
+                } else {
+                    document.getElementById('logo-restaurante').style.display = 'none';
                 }
 
                 if (configLoja.banner_header) {
@@ -803,6 +809,24 @@
             const filtroNav = document.getElementById('filtros');
             
             if (!window.db) return;
+
+            // Mostrar Skeleton Screen enquanto busca os dados
+            container.innerHTML = `
+                <div class="produtos-grid">
+                    ${Array(4).fill(0).map(() => `
+                        <div class="card skeleton-card">
+                            <div class="skeleton" style="width: 100%; height: 160px; border-radius: 12px; margin-bottom: 12px;"></div>
+                            <div class="skeleton" style="width: 70%; height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
+                            <div class="skeleton" style="width: 90%; height: 14px; border-radius: 4px; margin-bottom: 8px;"></div>
+                            <div class="skeleton" style="width: 80%; height: 14px; border-radius: 4px; margin-bottom: 15px;"></div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+                                <div class="skeleton" style="width: 60px; height: 24px; border-radius: 4px;"></div>
+                                <div class="skeleton" style="width: 100px; height: 36px; border-radius: 10px;"></div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
 
             try {
                 const querySnapshot = await db.collection('produtos')

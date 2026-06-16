@@ -33,12 +33,13 @@ try {
 }
 
 // Função auxiliar para upload no Firebase Storage
-async function uploadParaStorage(file, folder) {
+async function uploadParaStorage(file, folder, targetUid = null) {
     if (!file) return null;
     // Usamos o UID do Firebase Auth para organizar as pastas de forma segura
     const user = firebase.auth().currentUser;
-    // Prioriza specificUid se fornecido, senão usa o UID do usuário logado, senão o UID da sessão, senão 'anonimo'
-    const pathIdentifier = specificUid || (user ? user.uid : (sessaoAtiva ? sessaoAtiva.uid : 'anonimo'));
+    
+    // Prioriza targetUid se fornecido, senão usa o UID do usuário logado
+    const pathIdentifier = targetUid || (user ? user.uid : (sessaoAtiva ? sessaoAtiva.uid : 'anonimo'));
     
     if (!pathIdentifier || pathIdentifier === 'anonimo') {
         console.error("Não foi possível determinar o identificador para o upload. Upload cancelado.");
@@ -71,8 +72,9 @@ let filtroDataAdmin = new Date().toLocaleDateString('en-CA'); // Inicializa com 
 // Função auxiliar para carregar configurações da loja do Firestore
 async function getStoreConfig(ownerEmail) {
     if (!window.db || !ownerEmail) return {};
+    const emailKey = ownerEmail.toLowerCase().trim();
     try {
-        const doc = await db.collection('configuracoes').doc(ownerEmail).get();
+        const doc = await db.collection('configuracoes').doc(emailKey).get();
         return doc.exists ? doc.data() : {};
     } catch (error) {
         console.error("Erro ao carregar configurações da loja do Firestore:", error);
@@ -391,8 +393,14 @@ window.processarAuth = async function(e) {
 
             if (role === 'restaurante') {
                 showToast('Configurando seu restaurante...', 'info');
-                const open = document.getElementById('auth-open').value || "18";
-                const close = document.getElementById('auth-close').value || "23";
+                const emailRaw = document.getElementById('auth-user-reg').value;
+                const email = emailRaw.toLowerCase().trim();
+                const rawOpen = parseInt(document.getElementById('auth-open').value) || 18;
+                const rawClose = parseInt(document.getElementById('auth-close').value) || 23;
+                
+                let hAbertura = Math.max(0, Math.min(23, rawOpen || 18));
+                let hFechamento = Math.max(0, Math.min(23, rawClose || 23));
+
                 const logoFile = document.getElementById('auth-logo').files[0];
                 // Passa o UID do usuário recém-criado para o upload
                 let logoUrl = logoFile ? await uploadParaStorage(logoFile, 'loja', user.uid) : "";
@@ -403,8 +411,8 @@ window.processarAuth = async function(e) {
                 await db.collection('configuracoes').doc(email).set({
                     nome_exibicao: name,
                     whatsapp: phone.replace(/\D/g, ""),
-                    abertura: open,
-                    fechamento: close,
+                    abertura: hAbertura.toString(),
+                    fechamento: hFechamento.toString(),
                     logo: logoUrl,
                     slug: slug,
                     owner: email
@@ -471,12 +479,29 @@ function inicializarSistema() {
     aplicarMascaraTelefone('auth-phone');        // Telefone no Cadastro
     aplicarMascaraTelefone('telefone-cliente'); // Telefone no Checkout
 
+    // Define a Splash Screen (Declarar antes de chamar)
+    window.iniciarSplashScreen = function() {
+        const splash = document.getElementById('splash-screen');
+        const phraseEl = document.getElementById('splash-phrase');
+        if (!splash) return;
+
+        const frases = [
+            "Temperando o sistema...",
+            "Aquecendo o forno para você...",
+            "Organizando o cardápio do dia...",
+            "Preparando os melhores ingredientes..."
+        ];
+
+        if (phraseEl) phraseEl.innerText = frases[Math.floor(Math.random() * frases.length)];
+        setTimeout(() => splash.classList.add('hidden'), 2000);
+    };
+
+    // Inicializa a Splash Screen
+    window.iniciarSplashScreen();
+
     // Se estiver na página principal (index.html), carrega os dados da loja
-    // Isso garante que Firebase esteja inicializado antes de tentar carregar dados da loja
-    if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
-        if (typeof window.loadStoreSpecificData === 'function') {
-            window.loadStoreSpecificData();
-        }
+    if ((window.location.pathname.includes('index.html') || window.location.pathname === '/') && typeof window.loadStoreSpecificData === 'function') {
+        window.loadStoreSpecificData();
     }
     window.atualizarForcaSenha = function(val) {
         const meter = document.getElementById('strength-meter');
@@ -506,12 +531,15 @@ function inicializarSistema() {
     };
     
     // Reinicia a validação visual quando o modal abre ou muda de modo
-    const originalAbrirModal = window.abrirModalAuth;
-    window.abrirModalAuth = function() {
-        originalAbrirModal();
-        document.querySelectorAll('.form-group').forEach(g => g.classList.remove('is-valid'));
-        if (window.setupRealTimeValidation) window.setupRealTimeValidation();
-    };
+    if (!window.abrirModalAuth._isWrapped) {
+        const originalAbrirModal = window.abrirModalAuth;
+        window.abrirModalAuth = function() {
+            if (originalAbrirModal) originalAbrirModal();
+            document.querySelectorAll('.form-group').forEach(g => g.classList.remove('is-valid'));
+            if (window.setupRealTimeValidation) window.setupRealTimeValidation();
+        };
+        window.abrirModalAuth._isWrapped = true;
+    }
 
     // Prévia de Imagem para o Cadastro de Restaurante
     window.handleRegisterImagePreview = function(input) {
@@ -557,13 +585,13 @@ function inicializarSistema() {
                     }
 
                     if (perfil) {
-                        sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
+                        sessaoAtiva = { user: user.email.toLowerCase().trim(), role: perfil.role, uid: user.uid, name: perfil.name };
                     } else {
-                        sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
+                        sessaoAtiva = { user: user.email.toLowerCase().trim(), role: 'comprador', uid: user.uid };
                     }
                     localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
                 } catch (error) {
-                    sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
+                    sessaoAtiva = { user: user.email.toLowerCase().trim(), role: 'comprador', uid: user.uid };
                     localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
                 }
 
@@ -579,6 +607,7 @@ function inicializarSistema() {
                     document.body.classList.remove('is-locked');
                     showSection('dashboard');
                     renderizarHeaderAdmin();
+                    if (typeof preencherConfiguracoesAdmin === 'function') preencherConfiguracoesAdmin();
                     atualizarListaAdmin();
                     atualizarRelatorio();
                     atualizarSelectCategorias();
@@ -1228,8 +1257,10 @@ window.salvarConfigRapida = async function(campo, valor) {
         if (campo === 'horario') {
             const partes = valor.replace(/h/g, '').split(/[-–]/);
             if (partes.length === 2) {
-                config.abertura = partes[0].trim();
-                config.fechamento = partes[1].trim();
+                let hA = Math.max(0, Math.min(23, parseInt(partes[0].trim()) || 18));
+                let hF = Math.max(0, Math.min(23, parseInt(partes[1].trim()) || 23));
+                config.abertura = hA.toString();
+                config.fechamento = hF.toString();
             }
         }
 
@@ -1275,7 +1306,13 @@ async function renderizarHeaderAdmin() {
 
     if (config.logo) {
         const logo = document.getElementById('logo-admin');
-        if (logo) { logo.src = config.logo; logo.style.display = 'block'; }
+        if (logo) { 
+            logo.src = config.logo; 
+            logo.style.display = 'block'; 
+        }
+    } else {
+        const logo = document.getElementById('logo-admin');
+        if (logo) logo.style.display = 'none';
     }
 
     if (config.banner_header) {
@@ -1306,51 +1343,55 @@ window.copiarLinkLoja = function() {
 };
 
 // Lógica para Configurações da Loja (Integrada ao Script Principal)
-document.addEventListener('DOMContentLoaded', async () => {
+// Função para preencher os campos do formulário de configuração no admin
+window.preencherConfiguracoesAdmin = async function() {
     const configForm = document.getElementById('configLojaForm');
-    if (!configForm) return;
-
-    const lojaFechadaManualmente = document.getElementById('lojaFechadaManualmente');
-    const inputFreteGratis = document.getElementById('inputFreteGratis');
-    const inputPedidoMinimo = document.getElementById('inputPedidoMinimo');
-    const inputWhatsapp = document.getElementById('inputWhatsapp');
-    const inputPix = document.getElementById('inputPix');
-    const inputTaxa = document.getElementById('inputTaxa');
-    const inputCupons = document.getElementById('inputCupons');
-    const inputCategoriasCustom = document.getElementById('inputCategoriasCustom');
-    const inputBanners = document.getElementById('inputBanners');
-    const inputLogo = document.getElementById('inputLogo'); // Input de arquivo para logo
+    if (!configForm || !sessaoAtiva) return;
 
     const configAtual = await carregarConfiguracoesRestaurante();
-
-    // Carregar valores iniciais
-    if (configAtual.logo && document.getElementById('logo-admin')) {
-        const logoAdmin = document.getElementById('logo-admin');
-        logoAdmin.src = configAtual.logo;
-        logoAdmin.style.display = 'block'; // Garante que a logo seja exibida
-    }
     
-    inputFreteGratis.value = configAtual.frete_gratis_valor || "";
-    lojaFechadaManualmente.checked = configAtual.fechada_manualmente === true;
-    inputPedidoMinimo.value = configAtual.pedido_minimo || "";
-    inputWhatsapp.value = configAtual.whatsapp || "";
-    inputPix.value = configAtual.pix || "";
-    inputTaxa.value = configAtual.taxa_entrega || 5.00;
-    inputCategoriasCustom.value = configAtual.categorias_custom || "";
+    const fieldsMapping = {
+        'lojaFechadaManualmente': 'fechada_manualmente',
+        'inputFreteGratis': 'frete_gratis_valor',
+        'inputPedidoMinimo': 'pedido_minimo',
+        'inputWhatsapp': 'whatsapp',
+        'inputPix': 'pix',
+        'inputTaxa': 'taxa_entrega',
+        'inputCupons': 'cupons',
+        'inputCategoriasCustom': 'categorias_custom'
+    };
+
+    for (let id in fieldsMapping) {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.type === 'checkbox') {
+                el.checked = configAtual[fieldsMapping[id]] === true;
+            } else {
+                el.value = configAtual[fieldsMapping[id]] || (id === 'inputTaxa' ? '5.00' : '');
+            }
+        }
+    }
+};
+
+// Inicialização dos Listeners de Configuração
+document.addEventListener('DOMContentLoaded', () => {
+    const configForm = document.getElementById('configLojaForm');
+    if (!configForm) return;
 
     configForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const configAtual = await carregarConfiguracoesRestaurante();
         const novasConfigs = {
             ...configAtual,
-            fechada_manualmente: lojaFechadaManualmente.checked,
-            frete_gratis_valor: inputFreteGratis.value,
-            pedido_minimo: inputPedidoMinimo.value,
-            whatsapp: inputWhatsapp.value,
-            pix: inputPix.value,
-            taxa_entrega: inputTaxa.value,
-            cupons: inputCupons.value,
-            categorias_custom: inputCategoriasCustom.value
+            fechada_manualmente: document.getElementById('lojaFechadaManualmente').checked,
+            frete_gratis_valor: document.getElementById('inputFreteGratis').value,
+            pedido_minimo: document.getElementById('inputPedidoMinimo').value,
+            whatsapp: document.getElementById('inputWhatsapp').value,
+            pix: document.getElementById('inputPix').value,
+            taxa_entrega: document.getElementById('inputTaxa').value,
+            cupons: document.getElementById('inputCupons').value,
+            categorias_custom: document.getElementById('inputCategoriasCustom').value
         };
 
         // Força a criação do slug se ele não existir ou se o nome de exibição for válido
