@@ -360,13 +360,13 @@ window.processarAuth = async function(e) {
         if (!name || !phone) return showToast('Preencha Nome e Telefone!', 'error');
 
         try {
-            window.isProcessingRegistration = true;
             showToast('Criando sua conta...', 'info');
             const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
             const user = userCredential.user;
             
+            // Lógica Unificada: Primeiro criamos o documento de usuário para todos
             await db.collection('usuarios').doc(user.uid).set({
-                user: email,
+                email: email,
                 role: role,
                 name: name,
                 phone: phone,
@@ -392,22 +392,20 @@ window.processarAuth = async function(e) {
                 }, { merge: true });
             }
 
-            // Prepara a sessão local imediatamente para evitar esperas do banco no redirecionamento
-            sessaoAtiva = { user: email, role: role, uid: user.uid, name: name };
-            localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
-
-            window.limparRegisterPreview(); // Limpa a prévia após o cadastro
+            // Finalização do processo
+            window.limparRegisterPreview();
             
             if (role === 'restaurante') {
                 showToast('Conta e restaurante criados com sucesso!');
-                setTimeout(() => { 
-                    window.isProcessingRegistration = false;
-                    window.location.href = 'admin-produtos.html'; 
-                }, 1000);
+                // Forçamos o redirecionamento manual para garantir
+                window.isProcessingRegistration = false;
+                window.location.href = 'admin-produtos.html';
             } else {
                 showToast('Conta criada com sucesso!');
                 window.isProcessingRegistration = false;
+                // Para o cliente, apenas fechamos o modal; o observer atualizará o topo
                 if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
+                window.atualizarTopoNav();
             }
             } catch (error) {
                 window.isProcessingRegistration = false;
@@ -530,7 +528,7 @@ function inicializarSistema() {
                     }
 
                     if (perfil) {
-                        sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
+                        sessaoAtiva = { user: user.email, role: perfil.role || 'comprador', uid: user.uid, name: perfil.name };
                     } else {
                         sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
                     }
@@ -555,7 +553,7 @@ function inicializarSistema() {
                     atualizarListaAdmin();
                     atualizarRelatorio();
                     atualizarSelectCategorias();
-                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage) {
+                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage && !window.isProcessingRegistration) {
                     if (confirm('Você está logado como restaurante. Deseja ir para o Painel Administrativo?')) {
                         window.location.href = 'admin-produtos.html';
                     }
