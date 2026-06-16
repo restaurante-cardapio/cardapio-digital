@@ -21,6 +21,7 @@ let editId = null; // Agora usamos ID em vez de Index para evitar erros em lista
 let currentProductStep = 1;
 let currentRegisterStep = 1;
 window.isProcessingRegistration = false; // Flag para evitar conflitos no observer durante cadastro
+window.dbStatus = 'loading'; // Status da conexão com o banco (loading, online, offline)
 
 let sessaoAtiva = null;
 try {
@@ -97,9 +98,13 @@ window.atualizarTopoNav = function() {
     
     const userLogado = sessaoAtiva;
 
+    // Status de Conexão (Indicador visual discreto)
+    const color = window.dbStatus === 'online' ? 'var(--success)' : (window.dbStatus === 'offline' ? 'var(--danger)' : '#cbd5e1');
+    const dot = `<span style="width: 8px; height: 8px; background: ${color}; border-radius: 50%; display: inline-block; margin-left: 8px; vertical-align: middle;" title="Banco de Dados: ${window.dbStatus}"></span>`;
+
     if (userLogado && leftSide) {
         const displayName = userLogado.name || (userLogado.user ? userLogado.user.split('@')[0] : 'Usuário');
-        leftSide.innerHTML = `<i data-lucide="user-check" style="color:var(--success)"></i> <span>${displayName}</span>`;
+        leftSide.innerHTML = `<i data-lucide="user-check" style="color:var(--success)"></i> <span>${displayName}</span>${dot}`;
 
         // Exibe "Meus Pedidos" se estiver logado e NÃO estiver no painel admin
         const isAdminPage = window.location.href.includes('admin-produtos.html');
@@ -109,7 +114,7 @@ window.atualizarTopoNav = function() {
             pedidosBtn.style.display = 'none';
         }
     } else if (leftSide) {
-        leftSide.innerHTML = `<i data-lucide="user-circle"></i> <span>Entrar / Cadastrar</span>`;
+        leftSide.innerHTML = `<i data-lucide="user-circle"></i> <span>Entrar / Cadastrar</span>${dot}`;
         if (pedidosBtn) pedidosBtn.style.display = 'none';
     }
     if (window.lucide) lucide.createIcons();
@@ -386,15 +391,23 @@ window.processarAuth = async function(e) {
                     slug: slug
                 }, { merge: true });
             }
-            
+
+            // Prepara a sessão local imediatamente para evitar esperas do banco no redirecionamento
+            sessaoAtiva = { user: email, role: role, uid: user.uid, name: name };
+            localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
+
             window.limparRegisterPreview(); // Limpa a prévia após o cadastro
             
             if (role === 'restaurante') {
                 showToast('Conta e restaurante criados com sucesso!');
-                setTimeout(() => { window.location.href = 'admin-produtos.html'; }, 1500);
+                setTimeout(() => { 
+                    window.isProcessingRegistration = false;
+                    window.location.href = 'admin-produtos.html'; 
+                }, 1000);
             } else {
                 showToast('Conta criada com sucesso!');
                 window.isProcessingRegistration = false;
+                if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
             }
             } catch (error) {
                 window.isProcessingRegistration = false;
@@ -409,13 +422,16 @@ window.processarAuth = async function(e) {
  * Inicialização Robusta
  */
 function inicializarSistema() {
-    if (!window.auth) return;
+    if (!window.auth || !window.db) {
+        console.error("Firebase não carregado corretamente.");
+        return;
+    }
 
     // Garante que o login persiste ao fechar o navegador
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     
-    // Atualização imediata com cache local antes do Firebase responder
-    atualizarTopoNav();
+    // Health Check da Conexão
+    verificarConexaoBanco();
 
     // Máscara de Telefone Centralizada (Cadastro e Checkout)
     const aplicarMascaraTelefone = (elId) => {
@@ -496,16 +512,24 @@ function inicializarSistema() {
         // Observador de Autenticação Centralizado
         auth.onAuthStateChanged(async (user) => {
             const isAdminPage = window.location.pathname.includes('admin-produtos');
-            
-            // Se estivermos cadastrando, o observer NÃO deve interferir
+
+            // Ignora o observador se o sistema estiver no meio de um cadastro
             if (window.isProcessingRegistration) return;
 
             if (user) {
                 try {
-                    let doc = await db.collection('usuarios').doc(user.uid).get();
-                    
-                    if (doc.exists) {
-                        const perfil = doc.data();
+                    // Polling: Tenta buscar o perfil no Firestore por até 5 segundos
+                    let perfil = null;
+                    for (let i = 0; i < 10; i++) {
+                        const doc = await db.collection('usuarios').doc(user.uid).get();
+                        if (doc.exists) {
+                            perfil = doc.data();
+                            break;
+                        }
+                        await new Promise(res => setTimeout(res, 500)); // Espera 500ms
+                    }
+
+                    if (perfil) {
                         sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
                     } else {
                         sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
@@ -542,6 +566,22 @@ function inicializarSistema() {
                 atualizarTopoNav();
                 // Bloqueio removido
             }
+        });
+}
+
+/**
+ * Verifica a saúde da conexão com o Firestore
+ */
+function verificarConexaoBanco() {
+    db.collection('configuracoes').limit(1).get()
+        .then(() => {
+            window.dbStatus = 'online';
+            window.atualizarTopoNav();
+        })
+        .catch((err) => {
+            window.dbStatus = 'offline';
+            window.atualizarTopoNav();
+            console.error("Falha na conexão Firestore:", err);
         });
 }
 

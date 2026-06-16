@@ -464,17 +464,11 @@
     <script src="script.js"></script>
     <script>
         // Identificação da Loja via URL
+        const urlParams = new URLSearchParams(window.location.search);
         let restauranteAtual;
         let configLoja = {}; // Variável global para as configurações da loja
-        let WHATSAPP_RESTAURANTE = ""; 
-        let TAXA_ENTREGA = 0;
-        let HORA_ABERTURA = 0;
-        let HORA_FECHAMENTO = 24;
-        let PEDIDO_MINIMO = 0;
-        let FRETE_GRATIS_VALOR = 0;
 
         async function loadStoreSpecificData() {
-            const urlParams = new URLSearchParams(window.location.search);
             let lojaParam = urlParams.get('loja');
 
             try {
@@ -720,7 +714,7 @@
 
         // Função para verificar Cupom Automático via URL
         function verificarCupomURL() {
-            const cupomURL = urlParams.get('cupom');
+            const cupomURL = new URLSearchParams(window.location.search).get('cupom');
             if (cupomURL) {
                 const codigo = cupomURL.toUpperCase();
                 if (cuponsDaLoja[codigo]) {

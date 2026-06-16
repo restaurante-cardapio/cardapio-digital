@@ -50,7 +50,7 @@ body {
     padding-bottom: 120px;
 }
 
-Não esta /* Estilos de bloqueio removidos */
+/* Estilos de bloqueio removidos */
 .admin-lock-overlay { display: none !important; }
 body.is-locked main, body.is-locked .container, body.is-locked header { filter: none !important; pointer-events: auto !important; }
 
