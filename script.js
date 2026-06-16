@@ -20,6 +20,7 @@ if (typeof firebase !== 'undefined') {
 let editId = null; // Agora usamos ID em vez de Index para evitar erros em listas filtradas
 let currentProductStep = 1;
 let currentRegisterStep = 1;
+window.isProcessingRegistration = false; // Flag para evitar conflitos no observer durante cadastro
 
 let sessaoAtiva = null;
 try {
@@ -343,6 +344,7 @@ window.processarAuth = async function(e) {
         }
     } else {
         // Modo de Cadastro (Register)
+        window.isProcessingRegistration = true;
         const role = document.getElementById('auth-role').value;
         const email = document.getElementById('auth-user-reg').value;
         const pass = document.getElementById('auth-pass-reg').value;
@@ -383,9 +385,18 @@ window.processarAuth = async function(e) {
                     slug: slug
                 }, { merge: true });
             }
-            showToast('Conta criada com sucesso!');
+            
             window.limparRegisterPreview(); // Limpa a prévia após o cadastro
+            
+            if (role === 'restaurante') {
+                showToast('Conta e restaurante criados com sucesso!');
+                setTimeout(() => { window.location.href = 'admin-produtos.html'; }, 1500);
+            } else {
+                showToast('Conta criada com sucesso!');
+                window.isProcessingRegistration = false;
+            }
             } catch (error) {
+                window.isProcessingRegistration = false;
                 let msg = error.message;
                 if (error.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
                 return showToast(msg, 'error');
@@ -512,7 +523,7 @@ function inicializarSistema() {
                     sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
                 }
 
-                if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
+                if (!window.isProcessingRegistration && typeof window.closeModal === 'function') window.closeModal('modal-auth');
                 atualizarTopoNav();
 
                 if (isAdminPage) {
@@ -522,7 +533,7 @@ function inicializarSistema() {
                     atualizarListaAdmin();
                     atualizarRelatorio();
                     atualizarSelectCategorias();
-                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage) {
+                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage && !window.isProcessingRegistration) {
                     if (confirm('Você está logado como restaurante. Deseja ir para o Painel Administrativo?')) {
                         window.location.href = 'admin-produtos.html';
                     }
