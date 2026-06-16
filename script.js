@@ -480,10 +480,13 @@ function inicializarSistema() {
     aplicarMascaraTelefone('telefone-cliente'); // Telefone no Checkout
 
     // Define a Splash Screen (Declarar antes de chamar)
+    // Define a Splash Screen Robusta
     window.iniciarSplashScreen = function() {
         const splash = document.getElementById('splash-screen');
         const phraseEl = document.getElementById('splash-phrase');
         if (!splash) return;
+
+        if (window.lucide) lucide.createIcons(); // Garante ícones na splash
 
         const frases = [
             "Temperando o sistema...",
@@ -493,16 +496,28 @@ function inicializarSistema() {
         ];
 
         if (phraseEl) phraseEl.innerText = frases[Math.floor(Math.random() * frases.length)];
-        setTimeout(() => splash.classList.add('hidden'), 2000);
+        
+        setTimeout(() => {
+            splash.classList.add('hidden');
+            setTimeout(() => { splash.style.display = 'none'; }, 600);
+        }, 2000);
     };
 
     // Inicializa a Splash Screen
+    // Inicia a Splash Screen imediatamente
     window.iniciarSplashScreen();
 
     // Se estiver na página principal (index.html), carrega os dados da loja
     if ((window.location.pathname.includes('index.html') || window.location.pathname === '/') && typeof window.loadStoreSpecificData === 'function') {
         window.loadStoreSpecificData();
     }
+    // Aguarda um pequeno delay para garantir que funções inline (index.html) foram processadas
+    setTimeout(() => {
+        if ((window.location.pathname.includes('index.html') || window.location.pathname === '/') && typeof window.loadStoreSpecificData === 'function') {
+            window.loadStoreSpecificData();
+        }
+    }, 100);
+
     window.atualizarForcaSenha = function(val) {
         const meter = document.getElementById('strength-meter');
         const bar = document.getElementById('strength-bar');
@@ -537,6 +552,7 @@ function inicializarSistema() {
             if (originalAbrirModal) originalAbrirModal();
             document.querySelectorAll('.form-group').forEach(g => g.classList.remove('is-valid'));
             if (window.setupRealTimeValidation) window.setupRealTimeValidation();
+            if (window.lucide) lucide.createIcons(); // Garante o olho da senha
         };
         window.abrirModalAuth._isWrapped = true;
     }

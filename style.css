@@ -133,7 +133,7 @@ body.is-locked main, body.is-locked .container, body.is-locked header { filter: 
 /* --- Splash Screen Criativa --- */
 .splash-screen {
     position: fixed;
-    inset: 0;
+    inset: 0; height: 100dvh; width: 100vw;
     background: linear-gradient(45deg, var(--primary-color), #991b1b, var(--primary-hover));
     background-size: 200% 200%;
     animation: gradientBG 5s ease infinite;
@@ -603,7 +603,6 @@ input, textarea, select {
 /* Ajuste para o check de validação não sobrepor o olho da senha */
 .form-group:has(.password-wrapper) .valid-icon {
     right: 46px !important; /* Distância segura para o olho (12px) + largura do botão */
-    top: 36px;
 }
 
 .password-wrapper .toggle-password {
