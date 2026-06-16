@@ -24,7 +24,7 @@
     </nav>
 
     <!-- Wrapper para a visualização da Loja -->
-    <div id="shop-view">
+    <div id="shop-view" style="display: none;">
         <header class="shop-header">
             <div class="header-cover" id="shop-header-cover">
             </div>
@@ -453,11 +453,13 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Firebase SDKs (Versão Compat) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <script src="script.js"></script>
 
     <script>
@@ -471,66 +473,8 @@
         let HORA_FECHAMENTO = 24;
         let PEDIDO_MINIMO = 0;
         let FRETE_GRATIS_VALOR = 0;
-        let lojaId = null;
-        function obterLojaId() {
-            const params = new URLSearchParams(window.location.search);
-            let id = params.get('loja');
-            
-            if (!id && localStorage.getItem('sessaoAtiva')) {
-                try {
-                    const sessao = JSON.parse(localStorage.getItem('sessaoAtiva'));
-                    id = sessao.user;
-                } catch(e) { console.error(e); }
-            }
-            return id;
-        }
-async function loadStoreSpecificData() {
-            lojaId = obterLojaId();
-            
-            if (!lojaId) {
-                alert("Erro: ID da loja não identificado na URL. Use ?loja=SEU_ID");
-                return;
-            }
 
-            console.log("Buscando dados para a loja:", lojaId);
-
-            try {
-                // Busca as configurações da loja específica no Firestore de forma segura para o cliente
-                const docConfig = await window.db.collection('configuracoes').doc(lojaId).get();
-                
-                if (docConfig.exists) {
-                    configLoja = docConfig.data();
-                    
-                    // Preenche os dados da Loja no HTML
-                    document.getElementById('nome-restaurante').innerText = configLoja.nome || "Nome do Restaurante";
-                    document.getElementById('status-loja').innerText = configLoja.status === 'aberto' ? '🔴 Aberto' : '⚪ Fechado';
-                    
-                    if (configLoja.logo) {
-                        const logoImg = document.getElementById('logo-restaurante');
-                        logoImg.src = configLoja.logo;
-                        logoImg.style.display = 'block';
-                    }
-                    if (configLoja.banner) {
-                        document.getElementById('shop-header-cover').style.backgroundImage = `url('${configLoja.banner}')`;
-                    }
-
-                    // Renderiza os banners adicionais, se houver
-                    carregarBanners();
-                }
-
-                // Renderiza o cardápio de produtos da loja
-                await carregarCardapio();
-
-                // Mostra a loja de fato
-                document.getElementById('shop-view').style.display = 'block';
-                if (window.lucide) lucide.createIcons();
-
-            } catch (error) {
-                console.error("Erro ao carregar os dados da loja:", error);
-            }
-        }
         async function loadStoreSpecificData() {
-            
             let lojaParam = window.urlParams.get('loja');
 
             try {
@@ -853,56 +797,7 @@ async function loadStoreSpecificData() {
                 });
             }, 3000);
         }
-async function carregarCardapio(categoriaSelecionada = 'Todos', termoBusca = '') {
-            const gridProdutos = document.getElementById('produtos-grid');
-            if (!gridProdutos) return;
 
-            gridProdutos.innerHTML = '<p style="padding: 20px; text-align:center;">Carregando cardápio...</p>';
-
-            try {
-                // Faz a busca trazendo apenas os produtos criados por essa loja específica
-                let query = window.db.collection('produtos').where('userId', '==', lojaId);
-                const snapshot = await query.get();
-                
-                let htmlProdutos = '';
-                let contagem = 0;
-
-                snapshot.forEach(doc => {
-                    const produto = doc.data();
-                    
-                    // Filtros aplicados no Client-side de forma dinâmica
-                    if (categoriaSelecionada !== 'Todos' && produto.categoria !== categoriaSelecionada) return;
-                    if (termoBusca && !produto.nome.toLowerCase().includes(termoBusca.toLowerCase())) return;
-
-                    contagem++;
-                    htmlProdutos += `
-                        <div class="product-card">
-                            <div class="product-img" style="background-image: url('${produto.imagem || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'}')"></div>
-                            <div class="product-info">
-                                <h3 class="product-title">${produto.nome}</h3>
-                                <p class="product-desc">${produto.descricao || ''}</p>
-                                <div class="product-meta">
-                                    <span class="product-price">R$ ${parseFloat(produto.preco).toFixed(2).replace('.', ',')}</span>
-                                    <button class="btn-add-cart" onclick="adicionarAoCarrinho('${doc.id}', '${produto.nome}', ${produto.preco})">
-                                        Adicionar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                if (contagem === 0) {
-                    gridProdutos.innerHTML = '<p style="padding: 40px; text-align:center; color: var(--text-muted);">Nenhum produto encontrado.</p>';
-                } else {
-                    gridProdutos.innerHTML = htmlProdutos;
-                }
-
-            } catch (error) {
-                console.error("Erro ao carregar produtos:", error);
-                gridProdutos.innerHTML = '<p style="padding: 20px; color: red; text-align:center;">Erro ao carregar produtos.</p>';
-            }
-        }
         async function carregarCardapio(categoriaFiltro = 'Todos', termoBusca = '') {
             const container = document.getElementById('cardapio-secoes');
             const filtroNav = document.getElementById('filtros');
@@ -1633,8 +1528,6 @@ function filtrar(cat, event) {
 function carregarBanners() {
             const listaBanners = configLoja.banners || [];
             const container = document.getElementById('banner-carousel');
-            if (!container) return;
-
             if (listaBanners.length === 0) {
                 container.style.display = 'none';
                 return;
@@ -1657,22 +1550,6 @@ function verificarLinkDireto() {
 
         // Chamada inicial para carregar os dados da loja e renderizar o cardápio
         loadStoreSpecificData();
-        window.addEventListener('DOMContentLoaded', () => {
-            console.log("Página carregada completamente. Iniciando busca de dados...");
-            
-            // Exibe a visualização da loja para testes
-            const shopView = document.getElementById('shop-view');
-            if(shopView) shopView.style.display = 'block';
-
-            if (typeof loadStoreSpecificData === 'function') {
-                loadStoreSpecificData();
-            } else {
-                console.error("Erro: A função loadStoreSpecificData não foi encontrada no script.js!");
-            }
-        });
-        window.addEventListener('DOMContentLoaded', () => {
-            loadStoreSpecificData();
-        });
     </script>
 </body>
 </html>
