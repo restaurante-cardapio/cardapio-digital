@@ -37,7 +37,14 @@ async function uploadParaStorage(file, folder) {
     if (!file) return null;
     // Usamos o UID do Firebase Auth para organizar as pastas de forma segura
     const user = firebase.auth().currentUser;
-    const pathIdentifier = user ? user.uid : (sessaoAtiva ? sessaoAtiva.user : 'anonimo');
+    // Prioriza specificUid se fornecido, senão usa o UID do usuário logado, senão o UID da sessão, senão 'anonimo'
+    const pathIdentifier = specificUid || (user ? user.uid : (sessaoAtiva ? sessaoAtiva.uid : 'anonimo'));
+    
+    if (!pathIdentifier || pathIdentifier === 'anonimo') {
+        console.error("Não foi possível determinar o identificador para o upload. Upload cancelado.");
+        return null;
+    }
+
     const fileName = `${Date.now()}_${file.name}`;
     const storageRef = storage.ref(`${folder}/${pathIdentifier}/${fileName}`);
     
@@ -59,7 +66,7 @@ const gerarSlug = (texto) => {
 let pedidosUnsubscribe = null; // Armazena a função para parar de ouvir pedidos
 let cachePedidosAdmin = []; // Cache para evitar requisições repetidas ao filtrar
 let filtroStatusAdmin = 'Todos'; // Estado global do filtro no Admin
-let filtroDataAdmin = new Date().toISOString().split('T')[0]; // Inicializa com a data de hoje (YYYY-MM-DD)
+let filtroDataAdmin = new Date().toLocaleDateString('en-CA'); // Inicializa com a data local (YYYY-MM-DD)
 
 // Função auxiliar para carregar configurações da loja do Firestore
 async function getStoreConfig(ownerEmail) {
@@ -337,6 +344,7 @@ window.processarAuth = async function(e) {
     e.preventDefault();
 
     if (currentAuthMode === 'login') {
+        console.log("Attempting login...");
         const email = document.getElementById('auth-user').value;
         const pass = document.getElementById('auth-pass').value;
         if (!email || !pass) return showToast('Preencha email e senha', 'error');
@@ -345,25 +353,32 @@ window.processarAuth = async function(e) {
             await auth.signInWithEmailAndPassword(email, pass);
             showToast('Bem-vindo de volta!');
         } catch (error) {
-            return showToast(error.message, 'error');
+            console.error("Error during login:", error);
+            let msg = error.message;
+            if (error.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
+            else if (error.code === 'auth/network-request-failed') msg = "Erro de conexão. Verifique sua internet.";
+            return showToast(msg, 'error');
         }
     } else {
         // Modo de Cadastro (Register)
         window.isProcessingRegistration = true;
+        console.log("Attempting registration...");
         const role = document.getElementById('auth-role').value;
         const email = document.getElementById('auth-user-reg').value;
         const pass = document.getElementById('auth-pass-reg').value;
         const name = document.getElementById('auth-name').value;
         const phone = document.getElementById('auth-phone').value;
 
-        if (!email.includes('@')) return showToast('Use um e-mail válido!', 'error');
-        if (!name || !phone) return showToast('Preencha Nome e Telefone!', 'error');
+        if (!name || name.trim().length < 3) { window.isProcessingRegistration = false; return showToast('Preencha um nome válido (mín. 3 caracteres)!', 'error'); }
+        if (!email || !email.includes('@')) { window.isProcessingRegistration = false; return showToast('Use um e-mail válido!', 'error'); }
+        if (!pass || pass.length < 6) { window.isProcessingRegistration = false; return showToast('A senha deve ter no mínimo 6 caracteres!', 'error'); }
+        if (!phone || phone.replace(/\D/g, "").length < 10) { window.isProcessingRegistration = false; return showToast('Informe um WhatsApp válido (com DDD)!', 'error'); }
 
         try {
-            window.isProcessingRegistration = true; // Trava o observador de login
             showToast('Criando conta no sistema...', 'info');
             const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
             const user = userCredential.user;
+            console.log("Firebase user created:", user.uid);
             
             // 1. Salva Perfil de Usuário
             await db.collection('usuarios').doc(user.uid).set({
@@ -379,7 +394,8 @@ window.processarAuth = async function(e) {
                 const open = document.getElementById('auth-open').value || "18";
                 const close = document.getElementById('auth-close').value || "23";
                 const logoFile = document.getElementById('auth-logo').files[0];
-                let logoUrl = logoFile ? await uploadParaStorage(logoFile, 'loja') : "";
+                // Passa o UID do usuário recém-criado para o upload
+                let logoUrl = logoFile ? await uploadParaStorage(logoFile, 'loja', user.uid) : "";
                 
                 const slug = gerarSlug(name);
 
@@ -402,19 +418,23 @@ window.processarAuth = async function(e) {
             
             if (role === 'restaurante') {
                 showToast('Tudo pronto! Entrando no painel...');
-                window.isProcessingRegistration = false;
+                window.isProcessingRegistration = false; // Reset on success
                 window.location.href = 'admin-produtos.html';
             } else {
                 showToast('Conta criada com sucesso!');
-                window.isProcessingRegistration = false;
+                window.isProcessingRegistration = false; // Reset on success
                 // Para o cliente, apenas fechamos o modal; o observer atualizará o topo
                 if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
                 window.atualizarTopoNav();
             }
-            } catch (error) {
-                window.isProcessingRegistration = false;
-                let msg = error.message;
-                if (error.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
+        } catch (error) {
+            console.error("Error during registration:", error);
+            window.isProcessingRegistration = false; // Reset on error
+            let msg = error.message;
+            if (error.code === 'auth/email-already-in-use') msg = "Este e-mail já está em uso.";
+            else if (error.code === 'auth/invalid-email') msg = "O formato do e-mail é inválido.";
+            else if (error.code === 'auth/weak-password') msg = "A senha é muito fraca.";
+            else if (error.code === 'auth/network-request-failed') msg = "Erro de conexão. Verifique sua internet.";
                 return showToast(msg, 'error');
             }
         }
@@ -983,7 +1003,7 @@ function aplicarFiltroEPublicar() {
     if (filtroDataAdmin) {
         filtrados = filtrados.filter(p => {
             if (!p.data || !p.data.toDate) return false;
-            const dataPedido = p.data.toDate().toISOString().split('T')[0];
+            const dataPedido = p.data.toDate().toLocaleDateString('en-CA');
             return dataPedido === filtroDataAdmin;
         });
     }
