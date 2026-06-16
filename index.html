@@ -1550,6 +1550,19 @@ function verificarLinkDireto() {
 
         // Chamada inicial para carregar os dados da loja e renderizar o cardápio
         loadStoreSpecificData();
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log("Página carregada completamente. Iniciando busca de dados...");
+            
+            // Exibe a visualização da loja para testes
+            const shopView = document.getElementById('shop-view');
+            if(shopView) shopView.style.display = 'block';
+
+            if (typeof loadStoreSpecificData === 'function') {
+                loadStoreSpecificData();
+            } else {
+                console.error("Erro: A função loadStoreSpecificData não foi encontrada no script.js!");
+            }
+        });
     </script>
 </body>
 </html>
