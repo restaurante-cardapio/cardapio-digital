@@ -355,6 +355,7 @@ window.processarAuth = async function(e) {
         if (!name || !phone) return showToast('Preencha Nome e Telefone!', 'error');
 
         try {
+            window.isProcessingRegistration = true;
             showToast('Criando sua conta...', 'info');
             const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
             const user = userCredential.user;
@@ -495,45 +496,42 @@ function inicializarSistema() {
         // Observador de Autenticação Centralizado
         auth.onAuthStateChanged(async (user) => {
             const isAdminPage = window.location.pathname.includes('admin-produtos');
+            
+            // Se estivermos cadastrando, o observer NÃO deve interferir
+            if (window.isProcessingRegistration) return;
 
             if (user) {
                 try {
                     let doc = await db.collection('usuarios').doc(user.uid).get();
                     
-                    // Aguarda a propagação do documento no Firestore (essencial para novos cadastros)
-                    if (!doc.exists) {
-                        for (let i = 0; i < 5; i++) {
-                            await new Promise(r => setTimeout(r, 1000));
-                            doc = await db.collection('usuarios').doc(user.uid).get();
-                            if (doc.exists) break;
-                        }
-                    }
-
                     if (doc.exists) {
                         const perfil = doc.data();
                         sessaoAtiva = { user: user.email, role: perfil.role, uid: user.uid, name: perfil.name };
-                        localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
                     } else {
-                        // Se o documento realmente não existir após as tentativas, define como comprador
                         sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
-                        localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
                     }
+                    localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
                 } catch (error) {
                     console.error("Erro ao recuperar perfil:", error);
                     sessaoAtiva = { user: user.email, role: 'comprador', uid: user.uid };
+                    localStorage.setItem('usuario_logado', JSON.stringify(sessaoAtiva));
                 }
 
-                if (!window.isProcessingRegistration && typeof window.closeModal === 'function') window.closeModal('modal-auth');
+                if (typeof window.closeModal === 'function') window.closeModal('modal-auth');
                 atualizarTopoNav();
 
                 if (isAdminPage) {
+                    if (sessaoAtiva.role !== 'restaurante') {
+                        window.location.href = 'index.html';
+                        return;
+                    }
                     document.body.classList.remove('is-locked');
                     showSection('dashboard');
                     renderizarHeaderAdmin();
                     atualizarListaAdmin();
                     atualizarRelatorio();
                     atualizarSelectCategorias();
-                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage && !window.isProcessingRegistration) {
+                } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage) {
                     if (confirm('Você está logado como restaurante. Deseja ir para o Painel Administrativo?')) {
                         window.location.href = 'admin-produtos.html';
                     }
