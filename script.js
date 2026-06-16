@@ -451,6 +451,13 @@ function inicializarSistema() {
     aplicarMascaraTelefone('auth-phone');        // Telefone no Cadastro
     aplicarMascaraTelefone('telefone-cliente'); // Telefone no Checkout
 
+    // Se estiver na página principal (index.html), carrega os dados da loja
+    // Isso garante que Firebase esteja inicializado antes de tentar carregar dados da loja
+    if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+        if (typeof window.loadStoreSpecificData === 'function') {
+            window.loadStoreSpecificData();
+        }
+    }
     window.atualizarForcaSenha = function(val) {
         const meter = document.getElementById('strength-meter');
         const bar = document.getElementById('strength-bar');
