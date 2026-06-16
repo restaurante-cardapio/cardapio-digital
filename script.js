@@ -956,7 +956,7 @@ function atualizarRelatorio() {
             isFirstLoad = false;
             aplicarFiltroEPublicar();
         }, error => {
-            console.error("Erro ao ouvir pedidos:", error);
+            console.error("Erro ao ouvir pedidos:", error); // Adicionado para depuração detalhada
             showToast("Erro ao conectar ao monitor de pedidos", "error");
         });
 }
