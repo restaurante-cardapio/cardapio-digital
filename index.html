@@ -67,14 +67,6 @@
                 </div>
             </div>
 
-            <div class="referral-banner">
-                <div style="text-align: left;">
-                    <h4 style="margin: 0; color: white;">📢 Indique e Ganhe!</h4>
-                    <p style="margin: 4px 0 0 0; font-size: 0.85rem; opacity: 0.9;">Convide um amigo e envie um desconto para ele!</p>
-                </div>
-                <button onclick="openModal('modal-referral')" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: white; color: #4f46e5;">Gerar Link</button>
-            </div>
-
             <div class="search-container">
                 <input type="text" id="inputBusca" placeholder="Pesquisar pratos..." oninput="filtrarPorBusca()">
             </div>
@@ -453,6 +445,46 @@
         </div>
     </div>
 
+    <!-- MODAL: DETALHES DO PRODUTO (Assumindo que este modal existe ou será criado) -->
+    <div id="modal-detalhes-produto" class="modal">
+        <div class="modal-content">
+            <button onclick="closeModal('modal-detalhes-produto')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
+            <h2 id="detalhe-nome" style="text-align: left; margin-bottom: 10px;">Nome do Produto</h2>
+            <p id="detalhe-descricao" style="text-align: left; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Descrição do produto.</p>
+
+            <div id="detalhe-combo-items" style="display: none; background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left;">
+                <!-- Combo items will be listed here -->
+            </div>
+
+            <div id="grupo-extras" class="option-group" style="display: none;">
+                <span class="option-title">Adicionais:</span>
+                <div id="lista-extras-disponiveis">
+                    <!-- Extras will be loaded here -->
+                </div>
+            </div>
+
+            <div class="form-group" style="text-align: left;">
+                <label for="custom-obs">Observações para este item:</label>
+                <textarea id="custom-obs" rows="2" placeholder="Ex: Sem cebola, maionese à parte..."></textarea>
+            </div>
+
+            <div id="secao-upsell" style="display: none; margin-top: 20px;">
+                <p class="upsell-title">Sugestões para acompanhar:</p>
+                <div id="lista-extras-sugeridos" class="upsell-container">
+                    <!-- Sugestões de upsell serão carregadas aqui -->
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px;">
+                <span class="preco">R$ <span id="total-detalhe">0.00</span></span>
+                <button id="btn-confirmar-adicao" class="btn-add" style="margin: 0;">
+                    <i data-lucide="plus" style="width: 16px; height: 16px; margin-right: 4px;"></i> Adicionar
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Firebase SDKs (Versão Compat) -->
@@ -481,6 +513,14 @@
             let lojaParam = window.urlParams.get('loja');
 
             try {
+                // Aguarda o Firebase/Firestore estar pronto (até 4 segundos)
+                for (let i = 0; i < 20; i++) {
+                    if (window.db) break;
+                    await new Promise(res => setTimeout(res, 200));
+                }
+
+                if (!window.db) throw new Error("Firebase não inicializado a tempo.");
+
                 if (!lojaParam) {
                     document.getElementById('platform-landing').style.display = 'block';
                     document.getElementById('shop-view').style.display = 'none';
@@ -547,22 +587,30 @@
                 PEDIDO_MINIMO = parseFloat(configLoja.pedido_minimo) || 0;
                 FRETE_GRATIS_VALOR = parseFloat(configLoja.frete_gratis_valor) || 0;
 
-                // Chamar funções que dependem de configLoja
-                carregarCuponsLoja();
-                await carregarCardapio();
-                carregarBanners();
-                verificarUltimoPedido();
-                atualizarPontosUI();
-                verificarLinkDireto();
-                iniciarContagemRegressiva();
-                verificarCupomURL();
-                gerarLinkExibicao();
-                socialProofLoop();
-                setTimeout(verificarCarrinhoAbandonado, 5000);
-                atualizarStatusLoja();
+                // Executa funções secundárias em blocos protegidos para não quebrar o nome da loja
+                try {
+                    carregarCuponsLoja();
+                    await carregarCardapio();
+                    carregarBanners();
+                    verificarUltimoPedido();
+                    atualizarPontosUI();
+                    verificarLinkDireto();
+                    iniciarContagemRegressiva();
+                    verificarCupomURL();
+                    gerarLinkExibicao();
+                    socialProofLoop();
+                    setTimeout(verificarCarrinhoAbandonado, 5000);
+                    atualizarStatusLoja();
+                    atualizarTotalBarra();
+                } catch (secError) {
+                    console.warn("Aviso: Erro em funções secundárias:", secError);
+                }
             } catch (error) {
                 console.error("Erro ao inicializar cardápio:", error);
-                document.getElementById('nome-loja-header').innerText = "Loja não encontrada";
+                // Só exibe "Loja não encontrada" se realmente não conseguimos o nome básico
+                if (document.getElementById('nome-loja-header').innerText === "Carregando...") {
+                    document.getElementById('nome-loja-header').innerText = "Loja não encontrada";
+                }
             }
         }
 
@@ -673,6 +721,13 @@
                                 `<small style="color:var(--primary-color)">+ ${item.adicionais.map(a => a.nome).join(', ')}</small>` 
                                 : ''
                             }
+                            ${item.isCombo && item.comboItems && item.comboItems.length > 0 ?
+                                `<small style="color:var(--text-muted); margin-top: 3px;">(Contém: ${item.comboItems.map(ci => ci.nome).join(', ')})</small>`
+                                : ''
+                            }
+                            ${item.obs ?
+                                `<small style="color:var(--text-muted); margin-top: 3px;">Obs: ${item.obs}</small>`
+                                : ''}
                             <small style="color:var(--text-muted)">R$ ${item.preco.toFixed(2)} un.</small>
                         </div>
                         <div class="qty-controls">
@@ -753,11 +808,9 @@
             document.getElementById('referral-link-display').innerText = link;
         }
 
-        // Persistência do Carrinho: Carrega o que estava salvo
-        let carrinho = (JSON.parse(localStorage.getItem('carrinho_atual')) || []).map(item => ({
-            ...item,
-            quantidade: item.quantidade || 1
-        }));
+        // Carrinho zerado ao recarregar a página
+        let carrinho = [];
+        localStorage.removeItem('carrinho_atual');
         
         let descontoCupom = 0;
         let cuponsDaLoja = {};
@@ -776,14 +829,10 @@
         }
 
         function isLojaAberta() {
-            // Agora usa configLoja que é carregada do Firestore
-            const agora = new Date();
-            const hora = agora.getHours();
-            const fechadaManualmente = configLoja.fechada_manualmente === true;
-            if (fechadaManualmente) {
-                return false; // Se fechada manualmente, está sempre fechada
+            if (typeof window.isLojaAberta === 'function') {
+                return window.isLojaAberta(configLoja);
             }
-            return hora >= HORA_ABERTURA && hora < HORA_FECHAMENTO; // Verifica horário normal
+            return true;
         }
 
         function getMockSales() { return Math.floor(Math.random() * 50) + 10; }
@@ -915,6 +964,7 @@
                             const itemNoCarrinho = carrinho.find(c => c.nome === prod.nome);
                             const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
                             const prodIcon = window.iconMap[prod.categoria] || 'package';
+            const isCombo = prod.isCombo ? 'combo-card' : '';
                             const imageHTML = prod.imagem 
                                 ? `<img src="${prod.imagem}" alt="${prod.nome}">`
                                 : `<div class="card-image-placeholder"><i data-lucide="${prodIcon}"></i></div>`;
@@ -926,7 +976,7 @@
                                     <button class="btn-card-qty" onclick="alterarQuantidadeCard('${prod.nome}', 1)"><i data-lucide="plus" style="width:14px"></i></button>
                                 </div>` : `
                                 <button class="btn-add" style="margin: 0; padding: 8px 16px; border-radius: 12px;" onclick="adicionarAoCarrinho(${prodData})">
-                                    <i data-lucide="plus" style="width: 16px; height: 16px; margin-right: 4px;"></i> Adicionar
+                                    <i data-lucide="plus" style="width: 16px; height: 16px; margin-right: 4px;"></i> ${prod.isCombo ? 'Ver Combo' : 'Adicionar'}
                                 </button>`;
                             
                             grid.innerHTML += `
@@ -936,6 +986,7 @@
                                             ${prod.tagFeatured ? '<span class="badge featured">★ Destaque</span>' : ''}
                                             ${prod.tagVeggie ? '<span class="badge veggie">🥦 Veggie</span>' : ''}
                                             ${prod.tagSpicy ? '<span class="badge spicy">🌶️ Picante</span>' : ''}
+                                            ${prod.isCombo ? '<span class="badge" style="background:#fef3c7; color:#92400e;">📦 Combo</span>' : ''}
                                         </div>
                                         ${imageHTML}
                                     </div>
@@ -957,24 +1008,44 @@
             } catch (error) {
                 console.error("Erro ao carregar cardápio:", error);
                 container.innerHTML = '<p class="loading">Erro ao conectar com o banco de dados.</p>';
+            } finally {
+                isRenderingCardapio = false;
             }
         }
 
         function adicionarAoCarrinho(prod) {
-            const itemExistente = carrinho.find(item => item.nome === prod.nome);
-            
-            if (itemExistente) {
-                itemExistente.quantidade = (itemExistente.quantidade || 1) + 1;
+            if (prod.isCombo) {
+                // For combos, open a specific modal or details view
+                // For now, just add it as a single item
+                const itemExistente = carrinho.find(item => item.nome === prod.nome);
+                if (itemExistente) {
+                    itemExistente.quantidade = (itemExistente.quantidade || 1) + 1;
+                } else {
+                    carrinho.push({ 
+                        nome: prod.nome, 
+                        preco: parseFloat(prod.preco), 
+                        quantidade: 1, 
+                        adicionais: [],
+                        obs: "",
+                        isCombo: true,
+                        comboItems: prod.comboItems // Store combo items for display
+                    });
+                }
             } else {
-                carrinho.push({ 
-                    nome: prod.nome, 
-                    preco: parseFloat(prod.preco), 
-                    quantidade: 1, 
-                    adicionais: [],
-                    obs: "" 
-                });
+                const itemExistente = carrinho.find(item => item.nome === prod.nome);
+                if (itemExistente) {
+                    itemExistente.quantidade = (itemExistente.quantidade || 1) + 1;
+                } else {
+                    carrinho.push({ 
+                        nome: prod.nome, 
+                        preco: parseFloat(prod.preco), 
+                        quantidade: 1, 
+                        adicionais: [],
+                        obs: "" 
+                    });
+                }
             }
-            
+
             salvarCarrinho();
             atualizarTotalBarra();
             
@@ -982,8 +1053,6 @@
             const btnAtivo = document.querySelector('.filter-btn.active');
             const termo = document.getElementById('inputBusca').value;
             carregarCardapio(btnAtivo ? btnAtivo.dataset.filter : 'Todos', termo);
-
-            showToast(`${prod.nome} adicionado!`);
 
             // Efeito de pulso no carrinho
             const footer = document.querySelector('.cart-footer');
@@ -1025,6 +1094,7 @@
             document.getElementById('detalhe-nome').innerText = prod.nome;
             document.getElementById('detalhe-descricao').innerText = prod.descricao || "";
             document.getElementById('custom-obs').value = "";
+            document.getElementById('detalhe-combo-items').innerHTML = ''; // Clear combo items
             document.getElementById('total-detalhe').innerText = parseFloat(prod.preco).toFixed(2);
             
             // Sugestão de Upsell (Bebidas ou Sobremesas)
@@ -1041,6 +1111,20 @@
                 `).join('');
             } else {
                 document.getElementById('secao-upsell').style.display = 'none';
+            }
+
+            // Display combo items if it's a combo
+            const comboItemsDisplay = document.getElementById('detalhe-combo-items');
+            if (prod.isCombo && prod.comboItems && prod.comboItems.length > 0) {
+                comboItemsDisplay.style.display = 'block';
+                comboItemsDisplay.innerHTML = `
+                    <p style="font-weight: 700; margin-bottom: 5px;">Itens do Combo:</p>
+                    <ul style="list-style: disc; margin-left: 20px; font-size: 0.9rem; color: var(--text-muted);">
+                        ${prod.comboItems.map(item => `<li>${item.nome}</li>`).join('')}
+                    </ul>
+                `;
+            } else {
+                comboItemsDisplay.style.display = 'none';
             }
 
             const containerExtras = document.getElementById('lista-extras-disponiveis');
@@ -1096,7 +1180,8 @@
                 preco: precoFinal, 
                 quantidade: 1, 
                 adicionais: extras,
-                obs: obs 
+                    obs: obs,
+                    isCombo: produtoSelecionadoTemp.isCombo || false,
             });
 
             salvarCarrinho();
@@ -1151,8 +1236,8 @@
         }
 
         function atualizarTotalBarra() {
-            const toggle = document.getElementById('tipo-pedido-toggle');
-            const tipoPedido = toggle && toggle.checked ? 'Entrega' : 'Retirada';
+            const toggleHidden = document.getElementById('tipo-pedido-toggle-hidden');
+            const tipoPedido = toggleHidden ? toggleHidden.value : 'Entrega';
             const freteGratisMinimo = FRETE_GRATIS_VALOR;
             const subtotal = carrinho.reduce((sum, item) => sum + (item.preco * (item.quantidade || 1)), 0);
             
@@ -1221,13 +1306,13 @@
             const telefone = document.getElementById('telefone-cliente').value;
             const endereco = document.getElementById('endereco-entrega').value;
             const cep = document.getElementById('cep-cliente').value;
-            const numero = document.getElementById('numero-cliente').value;
             const rua = document.getElementById('rua-cliente').value;
+            const numero = document.getElementById('numero-cliente').value;
             const bairro = document.getElementById('bairro-cliente').value;
             const pagamento = document.getElementById('forma-pagamento').value;
             const trocoPara = document.getElementById('troco-para').value;
-            const toggle = document.getElementById('tipo-pedido-toggle');
-            const tipoPedido = toggle && toggle.checked ? 'Entrega' : 'Retirada';
+            const toggleHidden = document.getElementById('tipo-pedido-toggle-hidden');
+            const tipoPedido = toggleHidden ? toggleHidden.value : 'Entrega';
             const observacoes = document.getElementById('observacoes').value;
 
             if (!isLojaAberta()) {
@@ -1485,13 +1570,21 @@
         function atualizarStatusLoja() {
             const statusDiv = document.getElementById('status-loja');
             const fechadaManualmente = configLoja.fechada_manualmente;
+            const agora = new Date();
+            const diaHoje = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][agora.getDay()];
+            const agenda = configLoja.agenda_semanal || {};
+            const configDia = agenda[diaHoje];
             
             if (fechadaManualmente) {
                 statusDiv.innerHTML = `<span class="status-badge closed">● Fechado Manualmente</span>`;
             } else if (isLojaAberta()) {
                 statusDiv.innerHTML = `<span class="status-badge open">● Aberto agora</span>`;
+            } else if (configDia && !configDia.aberto) {
+                statusDiv.innerHTML = `<span class="status-badge closed">● Fechado Hoje</span>`;
             } else {
-                statusDiv.innerHTML = `<span class="status-badge closed">● Fechado (${HORA_ABERTURA}h às ${HORA_FECHAMENTO}h)</span>`;
+                const hA = configDia ? configDia.inicio : HORA_ABERTURA;
+                const hF = configDia ? configDia.fim : HORA_FECHAMENTO;
+                statusDiv.innerHTML = `<span class="status-badge closed">● Fechado (${hA}h às ${hF}h)</span>`;
             }
         }
 
@@ -1536,8 +1629,11 @@
 
         function verificarCarrinhoAbandonado() { console.log("Verificando carrinho..."); }
 
-        // Event listener para o tipo de pedido
-        document.getElementById('tipo-pedido-toggle').addEventListener('change', toggleEnderecoField);
+        // Event listener para o tipo de pedido (se o elemento existir)
+        const pedidoToggle = document.getElementById('tipo-pedido-toggle');
+        if (pedidoToggle) {
+            pedidoToggle.addEventListener('change', toggleEnderecoField);
+        }
 
 function filtrar(cat, event) {
             let termo = document.getElementById('inputBusca').value;

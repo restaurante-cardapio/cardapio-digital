@@ -123,6 +123,15 @@
                 </div>
             </div>
             <div id="lista-pedidos-historico" style="margin-bottom: 40px;"></div>
+
+            <hr>
+            <div class="section-header">
+                <h2>Meus Clientes (CRM)</h2>
+                <button onclick="exportarClientes()" class="btn-edit" style="width: auto;">Exportar CSV</button>
+            </div>
+            <div id="lista-clientes-crm" class="report-grid">
+                <!-- Preenchido via JS -->
+            </div>
         </section>
 
         <!-- SEÇÃO: MEU CARDÁPIO -->
@@ -141,9 +150,18 @@
             </div>
             <div class="card" style="max-width: 600px; margin: 0 auto; text-align: left; padding: 25px;">
                 <form id="configLojaForm">
+                    <h3 style="text-align: left; margin-bottom: 15px;">Horários de Funcionamento</h3>
+                    <div id="weekly-hours-config" style="margin-bottom: 25px; display: grid; gap: 10px; background: #f8fafc; padding: 15px; border-radius: 12px;">
+                        <!-- Gerado dinamicamente via JS -->
+                    </div>
+                    <hr>
                     <div class="form-group">
                         <label>Logo do Restaurante</label>
                         <input type="file" id="inputLogo" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label>Slogan / Descrição da Loja</label>
+                        <input type="text" id="inputDescricaoLoja" placeholder="O melhor sabor no conforto da sua casa">
                     </div>
                     <div class="form-group">
                         <label>WhatsApp (DDI+DDD+Número)</label>
@@ -185,6 +203,17 @@
                 </form>
             </div>
         </section>
+    </div>
+
+    <!-- Modal: Meus Pedidos -->
+    <div id="modal-meus-pedidos" class="modal">
+        <div class="modal-content">
+            <button onclick="closeModal('modal-meus-pedidos')" class="btn-close-modal"><i data-lucide="x"></i></button>
+            <h2 style="text-align: left; margin-bottom: 20px;">Meus Pedidos</h2>
+            <ul id="lista-meus-pedidos" class="cart-item-list" style="margin-top: 10px;">
+                <!-- Preenchido via JS -->
+            </ul>
+        </div>
     </div>
 
     <!-- Modal Auth Dinâmico -->
@@ -317,6 +346,7 @@
     <!-- MODAL: CADASTRO DE PRODUTO -->
     <div id="modal-produto" class="modal">
         <div class="modal-content">
+            <button onclick="closeModal('modal-produto')" class="btn-close-modal"><i data-lucide="x"></i></button>
             <div class="step-progress-container" style="margin-bottom: 25px;">
                 <div class="step-dot active" data-prod-step="1">1</div>
                 <div class="step-dot" data-prod-step="2">2</div>
@@ -328,6 +358,30 @@
             <form id="cadastroProdutoForm">
                 <!-- PASSO 1: Básico -->
                 <div class="product-step active" id="prod-step-1">
+                    <div class="form-group" style="text-align: left;">
+                        <label style="display: flex; align-items: center; gap: 10px; font-weight: normal;">
+                            <input type="checkbox" id="isCombo" style="width: auto;">
+                            <span>Este produto é um Combo/Pacote?</span>
+                        </label>
+                    </div>
+                    <div id="combo-items-section" class="form-group" style="display: none;">
+                        <label>Itens do Combo</label>
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <input type="text" id="combo-item-search" placeholder="Buscar produto para adicionar ao combo..." style="flex: 1;">
+                            <button type="button" class="btn-inline-add" onclick="searchProductsForCombo()">
+                                <i data-lucide="search"></i>
+                            </button>
+                        </div>
+                        <div id="combo-search-results" class="modern-selection-grid" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Search results will be rendered here -->
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <label>Itens Selecionados:</label>
+                            <ul id="selected-combo-items" style="list-style: none; padding: 0;">
+                                <!-- Selected items will be rendered here -->
+                            </ul>
+                        </div>
+                    </div>
                     <div class="form-group" style="text-align: left;">
                         <label for="nome">Nome do Produto</label>
                         <input type="text" id="nome" placeholder="Ex: Pizza Calabresa" required>

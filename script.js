@@ -107,60 +107,68 @@ window.atualizarTopoNav = function() {
     
     const userLogado = sessaoAtiva;
 
-    // Status de Conexão (Indicador visual discreto)
-    const color = window.dbStatus === 'online' ? 'var(--success)' : (window.dbStatus === 'offline' ? 'var(--danger)' : '#cbd5e1');
-    const dot = `<span style="width: 8px; height: 8px; background: ${color}; border-radius: 50%; display: inline-block; margin-left: 8px; vertical-align: middle;" title="Banco de Dados: ${window.dbStatus}"></span>`;
-
     if (userLogado && leftSide) {
         const displayName = userLogado.name || (userLogado.user ? userLogado.user.split('@')[0] : 'Usuário');
-        leftSide.innerHTML = `<i data-lucide="user-check" style="color:var(--success)"></i> <span>${displayName}</span>${dot}`;
+        leftSide.innerHTML = `<i data-lucide="user-check" style="color:var(--success)"></i> <span>${displayName}</span>`;
 
         // Exibe "Meus Pedidos" se estiver logado e NÃO estiver no painel admin
-        const isAdminPage = window.location.href.includes('admin-produtos.html');
-        if (pedidosBtn && !isAdminPage) {
+        if (pedidosBtn) {
             pedidosBtn.style.display = 'flex';
-        } else if (pedidosBtn) {
-            pedidosBtn.style.display = 'none';
         }
     } else if (leftSide) {
-        leftSide.innerHTML = `<i data-lucide="user-circle"></i> <span>Entrar / Cadastrar</span>${dot}`;
+        leftSide.innerHTML = `<i data-lucide="user-circle"></i> <span>Entrar / Cadastrar</span>`;
         if (pedidosBtn) pedidosBtn.style.display = 'none';
     }
     if (window.lucide) lucide.createIcons();
 };
 
 window.abrirMeusPedidos = async function() {
-    const userLogado = JSON.parse(localStorage.getItem('usuario_logado'));
-    if (!userLogado) return;
+    const userLogado = sessaoAtiva || JSON.parse(localStorage.getItem('usuario_logado'));
+    if (!userLogado) {
+        showToast("Faça login para ver seus pedidos", "info");
+        return;
+    }
 
     const lista = document.getElementById('lista-meus-pedidos');
     if (!lista) return;
 
     lista.innerHTML = '<p class="loading">Carregando seus pedidos...</p>';
-
-    const querySnapshot = await db.collection('pedidos')
-                                  .where('usuario', '==', userLogado.user)
-                                  .orderBy('data', 'desc')
-                                  .get();
-    
-    const meusPedidos = [];
-    querySnapshot.forEach(doc => meusPedidos.push(doc.data()));
-
-    if (meusPedidos.length === 0) {
-        lista.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 20px;">Você ainda não realizou pedidos.</p>';
-    } else {
-        lista.innerHTML = meusPedidos.map(p => `
-            <li style="flex-direction: column; align-items: flex-start; gap: 5px;">
-                <div style="display:flex; justify-content: space-between; width: 100%;">
-                    <small style="color: var(--text-muted)">${p.data.toDate().toLocaleString()}</small>
-                    <b style="color:var(--success)">R$ ${parseFloat(p.total).toFixed(2)}</b>
-                </div>
-                <div style="font-size: 0.85rem; font-weight: 500;">${p.itens.join(', ')}</div>
-                <div style="font-size: 0.75rem; color: var(--primary-color); font-weight: 700;">Loja: ${p.restauranteOwner.toUpperCase()}</div>
-            </li>
-        `).join('');
-    }
     openModal('modal-meus-pedidos');
+
+    try {
+        // Removemos o .orderBy daqui para evitar a necessidade de criar índices manuais no Firebase
+        const querySnapshot = await db.collection('pedidos')
+                                      .where('usuario', '==', userLogado.user)
+                                      .get();
+        
+        let meusPedidos = [];
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            meusPedidos.push({ ...data, id: doc.id });
+        });
+
+        // Ordenamos via JavaScript (mais resiliente a erros de índice)
+        meusPedidos.sort((a, b) => (b.data?.seconds || 0) - (a.data?.seconds || 0));
+
+        if (meusPedidos.length === 0) {
+            lista.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 20px;">Você ainda não realizou pedidos.</p>';
+        } else {
+            lista.innerHTML = meusPedidos.map(p => `
+                <li style="flex-direction: column; align-items: flex-start; gap: 5px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px; margin-bottom: 12px;">
+                    <div style="display:flex; justify-content: space-between; width: 100%;">
+                        <small style="color: var(--text-muted)">${p.data && typeof p.data.toDate === 'function' ? p.data.toDate().toLocaleString() : 'Data Indisponível'}</small>
+                        <b style="color:var(--success)">R$ ${parseFloat(p.total || 0).toFixed(2)}</b>
+                    </div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">${Array.isArray(p.itens) ? p.itens.join(', ') : 'Itens não listados'}</div>
+                    <div style="font-size: 0.75rem; color: var(--primary-color); font-weight: 700;">Loja: ${p.restauranteOwner ? p.restauranteOwner.toUpperCase() : 'N/A'}</div>
+                    <div style="font-size: 0.7rem; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; margin-top: 4px; color: var(--text-muted);">Status: <b>${p.status || 'Pendente'}</b></div>
+                </li>
+            `).join('');
+        }
+    } catch (error) {
+        console.error("Erro ao carregar pedidos:", error);
+        lista.innerHTML = `<p style="text-align:center; color:var(--danger); padding: 20px;">Erro ao carregar pedidos.<br><small style="color:gray">${error.message}</small></p>`;
+    }
 };
 
 window.abrirModalAuth = function() {
@@ -507,11 +515,6 @@ function inicializarSistema() {
     // Inicia a Splash Screen imediatamente
     window.iniciarSplashScreen();
 
-    // Se estiver na página principal (index.html), carrega os dados da loja
-    if ((window.location.pathname.includes('index.html') || window.location.pathname === '/') && typeof window.loadStoreSpecificData === 'function') {
-        window.loadStoreSpecificData();
-    }
-    // Aguarda um pequeno delay para garantir que funções inline (index.html) foram processadas
     setTimeout(() => {
         if ((window.location.pathname.includes('index.html') || window.location.pathname === '/') && typeof window.loadStoreSpecificData === 'function') {
             window.loadStoreSpecificData();
@@ -625,6 +628,8 @@ function inicializarSistema() {
                     renderizarHeaderAdmin();
                     if (typeof preencherConfiguracoesAdmin === 'function') preencherConfiguracoesAdmin();
                     atualizarListaAdmin();
+                    atualizarKanbanBoard(); // Carrega o Kanban ao entrar no admin
+                    atualizarCRMClientes();
                     atualizarRelatorio();
                     atualizarSelectCategorias();
                 } else if (sessaoAtiva.role === 'restaurante' && !isAdminPage) {
@@ -676,8 +681,11 @@ window.iconMap = {
 };
 
 window.openModal = function(id) {
-    document.getElementById(id).style.display = 'flex';
-    document.body.classList.add('no-scroll');
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.classList.add('no-scroll');
+    }
 }
 
 window.closeModal = function(id) {
@@ -719,7 +727,7 @@ window.addEventListener('click', function(event) {
 
 window.showSection = function(sectionId) {
     // Lista de todas as seções para garantir que apenas uma fique visível
-    const secoes = ['dashboard', 'cardapio', 'config'];
+    const secoes = ['dashboard', 'cardapio', 'kanban', 'config'];
     
     secoes.forEach(id => {
         const el = document.getElementById('section-' + id);
@@ -731,6 +739,11 @@ window.showSection = function(sectionId) {
     const activeNav = document.getElementById('nav-' + sectionId);
     if (activeNav) activeNav.classList.add('active');
     
+    // Se a seção Kanban for ativada, atualiza o board
+    if (sectionId === 'kanban') {
+        atualizarKanbanBoard();
+    }
+
     lucide.createIcons();
 }
 
@@ -867,68 +880,6 @@ window.limparPreview = function() {
     document.getElementById('image-preview-img').src = '';
     document.getElementById('preview-container').style.display = 'none';
 };
-
-// Salvar novo produto
-document.addEventListener('submit', async (e) => {
-    if (e.target.id !== 'cadastroProdutoForm') return;
-    e.preventDefault();
-    
-    showToast('Salvando produto...', 'info');
-    
-    const fileInput = document.getElementById('imagem');
-    const arquivoImagem = fileInput.files[0];
-    let imagemData = document.getElementById('imagemBase64').value;
-
-    try {
-        // Se um novo arquivo foi selecionado, faz upload para o Storage
-        if (arquivoImagem) {
-            imagemData = await uploadParaStorage(arquivoImagem, 'produtos');
-        }
-    } catch (err) {
-        console.error("Erro no upload da imagem:", err);
-        return showToast('Erro ao subir imagem', 'error');
-    }
-
-    const novoProduto = {
-        owner: sessaoAtiva.user, // Atrela o produto ao restaurante logado
-        nome: document.getElementById('nome').value,
-        preco: document.getElementById('preco').value,
-        ofertaExpira: document.getElementById('ofertaExpira').value,
-        estoque: document.getElementById('estoque').value,
-        descricao: document.getElementById('descricao').value,
-        categoria: document.getElementById('categoria').value,
-        imagem: imagemData,
-        disponivel: document.getElementById('disponivel').checked,
-        adicionais: document.getElementById('adicionais').value,
-        tagVeggie: document.getElementById('tagVeggie').checked,
-        tagSpicy: document.getElementById('tagSpicy').checked,
-        tagFeatured: document.getElementById('tagFeatured').checked
-    };
-
-    try {
-        if (!editId) {
-            // Firestore gera o ID automaticamente
-            const docRef = await db.collection('produtos').add(novoProduto);
-            // Opcional: Salva o ID gerado dentro do próprio objeto para facilitar filtros
-            await docRef.update({ id: docRef.id });
-            showToast('Produto salvo no Firestore!');
-        } else {
-            // Modo de Edição: Atualiza documento específico
-            await db.collection('produtos').doc(editId).set(novoProduto, { merge: true });
-            editId = null; 
-            document.getElementById('btnSalvar').innerText = 'Cadastrar Produto';
-            showToast('Produto atualizado!');
-        }
-
-        e.target.reset();
-        document.getElementById('imagemBase64').value = '';
-        await atualizarListaAdmin(); // Agora é uma chamada assíncrona
-        closeModal('modal-produto');
-    } catch (error) {
-        console.error("Erro ao salvar:", error);
-        showToast('Erro ao conectar com o banco de dados', 'error');
-    }
-});
 
 // Função para carregar dados no formulário para edição
 window.editarProduto = async function(id) {
@@ -1099,6 +1050,10 @@ window.alterarStatusPedido = async function(docId, novoStatus) {
         });
         showToast(`Status atualizado: ${novoStatus}`);
 
+        // Se o Kanban estiver ativo, atualiza-o
+        const currentSection = document.querySelector('.admin-nav .nav-item.active');
+        if (currentSection && currentSection.id === 'nav-kanban') atualizarKanbanBoard();
+
         // 2. Buscar detalhes do pedido para enviar a mensagem
         const pedidoDoc = await db.collection('pedidos').doc(docId).get();
         if (!pedidoDoc.exists) {
@@ -1175,6 +1130,57 @@ window.limparHistoricoVendas = async function() {
         showToast('Relatório zerado.');
     }
 }
+
+window.atualizarCRMClientes = async function() {
+    const container = document.getElementById('lista-clientes-crm');
+    if (!container || !sessaoAtiva) return;
+
+    try {
+        const snapshot = await db.collection('pedidos')
+            .where('restauranteOwner', '==', sessaoAtiva.user)
+            .get();
+            
+        const clientes = {};
+        snapshot.forEach(doc => {
+            const p = doc.data();
+            if (!clientes[p.telefone]) {
+                clientes[p.telefone] = { nome: p.cliente, totalGasto: 0, totalPedidos: 0 };
+            }
+            clientes[p.telefone].totalGasto += p.total;
+            clientes[p.telefone].totalPedidos += 1;
+        });
+
+        container.innerHTML = Object.keys(clientes).map(tel => `
+            <div class="report-card" style="text-align: left; padding: 15px;">
+                <b style="font-size: 1rem;">${clientes[tel].nome}</b>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 5px 0;">${tel}</p>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                    <span>📦 ${clientes[tel].totalPedidos} pedidos</span>
+                    <span style="color: var(--success); font-weight: bold;">R$ ${clientes[tel].totalGasto.toFixed(2)}</span>
+                </div>
+                <button onclick="window.open('https://wa.me/${tel.replace(/\D/g,'')}', '_blank')" class="btn-edit" style="width: 100%; margin-top: 10px; font-size: 0.7rem;">Chamar no Whats</button>
+            </div>
+        `).join('');
+    } catch (e) { console.error(e); }
+};
+
+window.exportarClientes = function() {
+    const container = document.getElementById('lista-clientes-crm');
+    const cards = container.querySelectorAll('.report-card');
+    let csv = "Nome,Telefone,Pedidos,Total Gasto\n";
+    cards.forEach(card => {
+        const nome = card.querySelector('b').innerText;
+        const tel = card.querySelector('p').innerText;
+        const spans = card.querySelectorAll('span');
+        csv += `"${nome}","${tel}","${spans[0].innerText}","${spans[1].innerText}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'clientes_restaurante.csv');
+    a.click();
+};
 
 // --- Lógica de Edição Inline no Header ---
 window.ativarEdicaoInline = function(campo) {
@@ -1316,7 +1322,7 @@ async function renderizarHeaderAdmin() {
         welcomeMessageEl.innerText = `Bem-vindo(a), ${ownerName}!`;
     }
 
-    document.getElementById('admin-descricao-loja').innerText = config.descricao_loja || "Gerencie seus produtos aqui";
+    document.getElementById('admin-descricao-loja').innerText = config.descricao_loja || "O melhor sabor no conforto da sua casa";
     document.getElementById('admin-horario-display').innerText = `${config.abertura || 18}h - ${config.fechamento || 23}h`;
     document.getElementById('admin-tempo-display').innerText = config.tempo_entrega || '30-50 min';
 
@@ -1374,7 +1380,8 @@ window.preencherConfiguracoesAdmin = async function() {
         'inputPix': 'pix',
         'inputTaxa': 'taxa_entrega',
         'inputCupons': 'cupons',
-        'inputCategoriasCustom': 'categorias_custom'
+        'inputCategoriasCustom': 'categorias_custom',
+        'inputDescricaoLoja': 'descricao_lo_ja'
     };
 
     for (let id in fieldsMapping) {
@@ -1398,8 +1405,18 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         
         const configAtual = await carregarConfiguracoesRestaurante();
+        const novaAgenda = {};
+        DIAS_SEMANA.forEach(dia => {
+            novaAgenda[dia] = {
+                aberto: document.getElementById(`check-${dia}`).checked,
+                inicio: document.getElementById(`start-${dia}`).value,
+                fim: document.getElementById(`end-${dia}`).value
+            };
+        });
+
         const novasConfigs = {
             ...configAtual,
+            agenda_semanal: novaAgenda,
             fechada_manualmente: document.getElementById('lojaFechadaManualmente').checked,
             frete_gratis_valor: document.getElementById('inputFreteGratis').value,
             pedido_minimo: document.getElementById('inputPedidoMinimo').value,
@@ -1407,7 +1424,8 @@ document.addEventListener('DOMContentLoaded', () => {
             pix: document.getElementById('inputPix').value,
             taxa_entrega: document.getElementById('inputTaxa').value,
             cupons: document.getElementById('inputCupons').value,
-            categorias_custom: document.getElementById('inputCategoriasCustom').value
+            categorias_custom: document.getElementById('inputCategoriasCustom').value,
+            descricao_loja: document.getElementById('inputDescricaoLoja').value
         };
 
         // Força a criação do slug se ele não existir ou se o nome de exibição for válido
@@ -1443,7 +1461,7 @@ async function atualizarSelectCategorias() {
     if (!select) return;
     
     const config = await carregarConfiguracoesRestaurante(); // Carrega do Firestore
-    const categoriasPadrao = ['Lanches', 'Pizzas', 'Acompanhamentos', 'Bebidas', 'Sobremesas', 'Outros'];
+    const categoriasPadrao = ['Combos', 'Lanches', 'Pizzas', 'Acompanhamentos', 'Bebidas', 'Sobremesas', 'Outros'];
     const customStr = config.categorias_custom || "";
     const custom = customStr.split(',').map(c => c.trim()).filter(c => c !== "");
     
@@ -1465,4 +1483,226 @@ window.excluirProduto = async function(id) {
             showToast('Erro ao excluir do banco', 'error');
         }
     }
+};
+
+// --- Dynamic Combos Implementation ---
+
+// Add new fields to the product modal
+document.addEventListener('DOMContentLoaded', () => {
+    const modalProduto = document.getElementById('modal-produto');
+    if (!modalProduto) return;
+
+    const isComboCheckbox = document.getElementById('isCombo');
+    const comboItemsSection = document.getElementById('combo-items-section');
+    
+    if (isComboCheckbox) {
+        isComboCheckbox.addEventListener('change', window.handleComboToggle);
+    }
+
+    const comboSearchInput = document.getElementById('combo-item-search');
+    if (comboSearchInput) {
+        comboSearchInput.addEventListener('input', () => {
+            window.searchProductsForCombo();
+        });
+    }
+
+    // Ensure lucide icons are created for the new elements
+    if (window.lucide) lucide.createIcons();
+});
+
+let selectedComboProducts = []; // Stores full product objects for combo items
+
+window.handleComboToggle = function() {
+    const isComboCheckbox = document.getElementById('isCombo');
+    const comboItemsSection = document.getElementById('combo-items-section');
+    const categorySelect = document.getElementById('categoria');
+
+    if (isComboCheckbox.checked) {
+        comboItemsSection.style.display = 'block';
+        if (categorySelect) categorySelect.value = 'Combos';
+        window.searchProductsForCombo(); // Load products when section is shown
+    } else {
+        comboItemsSection.style.display = 'none';
+        selectedComboProducts = []; // Clear selected items if not a combo
+        window.renderSelectedComboItems();
+    }
+};
+
+window.searchProductsForCombo = async function() {
+    const searchTerm = document.getElementById('combo-item-search').value.toLowerCase();
+    const searchResultsContainer = document.getElementById('combo-search-results');
+    searchResultsContainer.innerHTML = '<p class="loading">Buscando produtos...</p>';
+
+    try {
+        const querySnapshot = await db.collection('produtos')
+            .where('owner', '==', sessaoAtiva.user)
+            .get();
+
+        const allProducts = [];
+        querySnapshot.forEach(doc => {
+            allProducts.push({ ...doc.data(), id: doc.id });
+        });
+
+        const filteredProducts = allProducts.filter(p => 
+            !p.isCombo && // Filtra combos na memória para evitar erro de índice do Firestore
+            p.nome.toLowerCase().includes(searchTerm) && 
+            !selectedComboProducts.some(sci => sci.id === (p.id || p.nome)) // Exclude already selected items
+        );
+
+        searchResultsContainer.innerHTML = filteredProducts.map(p => {
+            const imageHTML = p.imagem
+                ? `<img src="${p.imagem}">`
+                : `<div class="card-image-placeholder" style="width:55px; height:55px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:#f8fafc;"><i data-lucide="package" style="width:24px; height:24px;"></i></div>`;
+            return `
+                <div class="selection-card" onclick="window.addComboItem('${p.id || p.nome}', '${p.nome.replace(/'/g, "\\'")}', ${p.preco})">
+                    ${imageHTML}
+                    <div class="selection-card-info">
+                        <b>${p.nome}</b>
+                        <span>R$ ${parseFloat(p.preco).toFixed(2)}</span>
+                    </div>
+                    <div class="selection-check">+</div>
+                </div>
+            `;
+        }).join('');
+        if (window.lucide) lucide.createIcons();
+    } catch (error) {
+        console.error("Erro ao buscar produtos para combo:", error);
+        searchResultsContainer.innerHTML = '<p class="loading">Erro ao carregar produtos.</p>';
+    }
+};
+
+window.addComboItem = function(id, nome, preco) {
+    selectedComboProducts.push({ id, nome, preco });
+    renderSelectedComboItems();
+    window.searchProductsForCombo(); // Re-run search to remove added item from results
+};
+
+window.removeComboItem = function(id) {
+    selectedComboProducts = selectedComboProducts.filter(item => item.id !== id);
+    renderSelectedComboItems();
+    window.searchProductsForCombo(); // Re-run search to add removed item back to results
+};
+
+window.renderSelectedComboItems = function() {
+    const container = document.getElementById('selected-combo-items');
+    container.innerHTML = selectedComboProducts.map(item => `
+        <li style="display: flex; justify-content: space-between; align-items: center; background: #e2e8f0; padding: 8px 12px; border-radius: 8px; margin-bottom: 5px;">
+            <span>${item.nome} (R$ ${item.preco.toFixed(2)})</span>
+            <button type="button" onclick="window.removeComboItem('${item.id}')" style="background: var(--danger); color: white; border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 0.75rem;">Remover</button>
+        </li>
+    `).join('');
+};
+
+// Modify editarProduto to load combo data
+const originalEditarProduto = window.editarProduto;
+window.editarProduto = async function(id) {
+    await originalEditarProduto(id); // Call original function first
+
+    const doc = await db.collection('produtos').doc(id).get();
+    const prod = doc.data();
+
+    const isComboCheckbox = document.getElementById('isCombo');
+    const comboItemsSection = document.getElementById('combo-items-section');
+    
+    if (prod.isCombo) {
+        isComboCheckbox.checked = true;
+        comboItemsSection.style.display = 'block';
+        selectedComboProducts = prod.comboItems || [];
+        window.renderSelectedComboItems();
+        window.searchProductsForCombo(); // Populate search results excluding selected
+    } else {
+        isComboCheckbox.checked = false;
+        comboItemsSection.style.display = 'none';
+        selectedComboProducts = [];
+        renderSelectedComboItems();
+    }
+};
+
+// Modify product form submission to save combo data
+document.addEventListener('submit', async (e) => {
+    if (e.target.id !== 'cadastroProdutoForm') return;
+    e.preventDefault();
+
+    // Validação manual para campos em passos ocultos (Evita que o formulário trave silenciosamente)
+    const nomeVal = document.getElementById('nome').value;
+    const precoVal = document.getElementById('preco').value;
+    const categoriaVal = document.getElementById('categoria').value;
+
+    if (!nomeVal || !precoVal || !categoriaVal) {
+        showToast('Preencha Nome, Preço e Categoria no Passo 1!', 'error');
+        window.changeProductStep(1);
+        return;
+    }
+    
+    showToast('Salvando produto...', 'info');
+    
+    const fileInput = document.getElementById('imagem');
+    const arquivoImagem = fileInput.files[0];
+    let imagemData = document.getElementById('imagemBase64').value;
+
+    try {
+        if (arquivoImagem) {
+            imagemData = await uploadParaStorage(arquivoImagem, 'produtos');
+        }
+    } catch (err) {
+        console.error("Erro no upload da imagem:", err);
+        return showToast('Erro ao subir imagem', 'error');
+    }
+
+    const isCombo = document.getElementById('isCombo').checked;
+
+    const novoProduto = {
+        owner: sessaoAtiva.user,
+        nome: document.getElementById('nome').value,
+        preco: parseFloat(document.getElementById('preco').value), // Ensure price is a number
+        ofertaExpira: document.getElementById('ofertaExpira').value,
+        estoque: document.getElementById('estoque').value,
+        descricao: document.getElementById('descricao').value,
+        categoria: document.getElementById('categoria').value,
+        imagem: imagemData,
+        disponivel: document.getElementById('disponivel').checked,
+        adicionais: document.getElementById('adicionais').value,
+        tagVeggie: document.getElementById('tagVeggie').checked,
+        tagSpicy: document.getElementById('tagSpicy').checked,
+        tagFeatured: document.getElementById('tagFeatured').checked,
+        isCombo: isCombo,
+        comboItems: isCombo ? selectedComboProducts : []
+    };
+
+    try {
+        if (!editId) {
+            const docRef = await db.collection('produtos').add(novoProduto);
+            await docRef.update({ id: docRef.id });
+            showToast('Produto salvo no Firestore!');
+        } else {
+            await db.collection('produtos').doc(editId).set(novoProduto, { merge: true });
+            editId = null; 
+            document.getElementById('btnSalvar').innerText = 'Cadastrar Produto';
+            showToast('Produto atualizado!');
+        }
+
+        e.target.reset();
+        document.getElementById('imagemBase64').value = '';
+        limparPreview(); // Clear image preview
+        selectedComboProducts = []; // Clear combo items
+        window.renderSelectedComboItems(); // Update combo items display
+        window.handleComboToggle(); // Reset combo section visibility
+        await atualizarListaAdmin();
+        closeModal('modal-produto');
+    } catch (error) {
+        console.error("Erro ao salvar:", error);
+        showToast('Erro ao conectar com o banco de dados', 'error');
+    }
+});
+
+// Modify product form reset to also clear combo items
+const originalCloseModal = window.closeModal;
+window.closeModal = function(id) {
+    if (id === 'modal-produto') {
+        selectedComboProducts = []; // Clear combo items on modal close
+        window.renderSelectedComboItems();
+        document.getElementById('isCombo').checked = false; // Uncheck combo
+        window.handleComboToggle(); // Hide combo section
+    }
+    originalCloseModal(id);
 };
