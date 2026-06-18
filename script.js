@@ -17,6 +17,64 @@ if (typeof firebase !== 'undefined') {
     window.storage = firebase.storage();
 }
 
+
+window.isLojaAberta = function(config) {
+    // Se não houver config ou horários, assume fechado por segurança até carregar
+    if (!config || !config.abertura || !config.fechamento) return false;
+
+    const hA_default = 18; // Horário de abertura padrão
+    const hF_default = 23; // Horário de fechamento padrão
+
+    let hA_parsed, hF_parsed;
+
+    if (config && config.abertura !== undefined && config.abertura !== "") {
+        hA_parsed = parseInt(config.abertura.toString().split(':')[0]);
+    }
+    if (config && config.fechamento !== undefined && config.fechamento !== "") {
+        hF_parsed = parseInt(config.fechamento.toString().split(':')[0]);
+    }
+
+    if (isNaN(hA_parsed)) hA_parsed = hA_default;
+    if (isNaN(hF_parsed)) hF_parsed = hF_default;
+
+    try {
+        const agora = new Date();
+        const hora = agora.getHours();
+        // Lógica para horário que vira a meia-noite (ex: abre 18h e fecha 02h)
+        if (hF_parsed < hA_parsed) {
+            return hora >= hA_parsed || hora < hF_parsed;
+        }
+        return hora >= hA_parsed && hora < hF_parsed;
+    } catch (e) {
+        console.error("Erro na lógica de horário:", e);
+        return false; // Em caso de erro, assume que está fechada
+    }
+};
+
+/**
+ * Atualiza visualmente se a loja está aberta ou fechada no cardápio
+ */
+window.atualizarStatusLoja = function() {
+    const statusDiv = document.getElementById('status-loja-display');
+    if (!statusDiv) return;
+    
+    const config = window.configLoja;
+    
+    if (!config || config === null) {
+        // Se a configuração da loja ainda não foi carregada, mostra "Carregando..."
+        statusDiv.innerHTML = `<span class="status-badge closed">● Carregando...</span>`;
+        return;
+    }
+
+    const aberta = window.isLojaAberta(config);
+    if (aberta) {
+        statusDiv.innerHTML = `<span class="status-badge open">● Aberto agora</span>`;
+    } else {
+        let hA = (config.abertura) ? config.abertura.toString().split(':')[0] : '18';
+        statusDiv.innerHTML = `<span class="status-badge closed">● Fechado (Abre às ${hA}h)</span>`;
+    }
+};
+
 let editId = null; // Agora usamos ID em vez de Index para evitar erros em listas filtradas
 let currentProductStep = 1;
 let currentRegisterStep = 1;
@@ -119,6 +177,12 @@ window.atualizarTopoNav = function() {
         leftSide.innerHTML = `<i data-lucide="user-circle"></i> <span>Entrar / Cadastrar</span>`;
         if (pedidosBtn) pedidosBtn.style.display = 'none';
     }
+
+    // Atualiza o status da loja independentemente do login se estiver no cardápio
+    if (typeof window.atualizarStatusLoja === 'function') {
+        window.atualizarStatusLoja();
+    }
+
     if (window.lucide) lucide.createIcons();
 };
 
@@ -515,11 +579,7 @@ function inicializarSistema() {
     // Inicia a Splash Screen imediatamente
     window.iniciarSplashScreen();
 
-    setTimeout(() => {
-        if ((window.location.pathname.includes('index.html') || window.location.pathname === '/') && typeof window.loadStoreSpecificData === 'function') {
-            window.loadStoreSpecificData();
-        }
-    }, 100);
+    // Removido setTimeout redundante. O index.html já chama loadStoreSpecificData ao final do carregamento.
 
     window.atualizarForcaSenha = function(val) {
         const meter = document.getElementById('strength-meter');
@@ -794,68 +854,49 @@ const toBase64 = file => new Promise((resolve, reject) => {
 });
 
 // Carregar e mostrar produtos para o admin
-async function atualizarListaAdmin() {
+let unsubProdutosAdmin = null;
+function atualizarListaAdmin() {
     if (!sessaoAtiva || sessaoAtiva.role !== 'restaurante' || !window.db) return;
     
     const listaAdmin = document.getElementById('lista-admin');
     if (!listaAdmin) return;
 
-    try {
-        // Busca apenas os produtos onde o campo 'owner' é igual ao usuário logado
-        const querySnapshot = await db.collection('produtos')
-                                      .where('owner', '==', sessaoAtiva.user)
-                                      .get();
-        
-        const meusProdutos = [];
-        querySnapshot.forEach(doc => {
-            meusProdutos.push({ ...doc.data(), id: doc.id });
+    if (unsubProdutosAdmin) return; // Já está ouvindo
+
+    unsubProdutosAdmin = db.collection('produtos')
+        .where('owner', '==', sessaoAtiva.user)
+        .onSnapshot(querySnapshot => {
+            listaAdmin.innerHTML = '';
+            querySnapshot.forEach(doc => {
+                const prod = { ...doc.data(), id: doc.id };
+                const iconName = window.iconMap[prod.categoria] || 'package';
+                const imageContent = prod.imagem 
+                    ? `<img src="${prod.imagem}" style="width:100%; height:180px; object-fit:cover; border-radius:8px;">`
+                    : `<div class="card-image-placeholder" style="height:180px; border-radius:8px;"><i data-lucide="${iconName}"></i></div>`;
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    ${imageContent}
+                    <div style="display: flex; flex-direction: column; flex-grow: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="badge">${prod.categoria}</span>
+                            <span class="badge ${prod.disponivel !== false ? 'available' : 'unavailable'}">
+                                ${prod.disponivel !== false ? '● Ativo' : '● Pausado'}
+                            </span>
+                        </div>
+                        <h3 style="text-align: left; margin: 10px 0;">${prod.nome}</h3>
+                        <p class="preco">R$ ${parseFloat(prod.preco).toFixed(2)}</p>
+                        <button onclick="editarProduto('${prod.id}')" class="btn-edit">Editar</button>
+                        <button onclick="excluirProduto('${prod.id}')" class="btn-danger">Remover</button>
+                    </div>
+                `;
+                listaAdmin.appendChild(card);
+            });
+            if (window.lucide) lucide.createIcons();
+        }, error => {
+            console.error("Erro ao ouvir produtos:", error);
         });
-
-        listaAdmin.innerHTML = '';
-
-        meusProdutos.forEach((prod) => {
-        const iconName = window.iconMap[prod.categoria] || 'package';
-        const imageContent = prod.imagem 
-            ? `<img src="${prod.imagem}" style="width:100%; height:180px; object-fit:cover; border-radius:8px;">`
-            : `<div class="card-image-placeholder" style="height:180px; border-radius:8px;">
-                <i data-lucide="${iconName}"></i>
-               </div>`;
-
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-            ${imageContent}
-            <div style="display: flex; flex-direction: column; flex-grow: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span class="badge">${prod.categoria}</span>
-                    <span class="badge ${prod.disponivel !== false ? 'available' : 'unavailable'}">
-                        ${prod.disponivel !== false ? '● Ativo' : '● Pausado'}
-                    </span>
-                </div>
-                <div style="margin-top: 5px; display: flex; gap: 5px;">
-                    ${prod.tagVeggie ? '<span class="badge veggie">VEG</span>' : ''}
-                    ${prod.tagSpicy ? '<span class="badge spicy">PIMENTA</span>' : ''}
-                    ${prod.tagFeatured ? '<span class="badge featured">★</span>' : ''}
-                </div>
-                <h3 style="text-align: left; margin: 10px 0;">${prod.nome}</h3>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Estoque: ${prod.estoque !== undefined && prod.estoque !== "" ? prod.estoque : '∞'}</p>
-                ${prod.ofertaExpira ? `<p style="font-size: 0.7rem; color: var(--danger);">Expira: ${new Date(prod.ofertaExpira).toLocaleString()}</p>` : ''}
-                <p class="preco">R$ ${parseFloat(prod.preco).toFixed(2)}</p>
-                <button onclick="editarProduto('${prod.id}')" class="btn-edit">
-                    Editar Produto
-                </button>
-                <button onclick="excluirProduto('${prod.id}')" class="btn-danger">
-                    Remover Produto
-                </button>
-            </div>
-        `;
-        listaAdmin.appendChild(card);
-    });
-    } catch (error) {
-        console.error("Erro ao carregar produtos:", error);
-        showToast('Erro ao carregar lista do banco', 'error');
-    }
-    lucide.createIcons();
 }
 
 // Gerenciamento de Prévia de Imagem
@@ -1279,8 +1320,8 @@ window.salvarConfigRapida = async function(campo, valor) {
         if (campo === 'horario') {
             const partes = valor.replace(/h/g, '').split(/[-–]/);
             if (partes.length === 2) {
-                let hA = Math.max(0, Math.min(23, parseInt(partes[0].trim()) || 18));
-                let hF = Math.max(0, Math.min(23, parseInt(partes[1].trim()) || 23));
+                let hA = (partes[0].trim() !== "") ? parseInt(partes[0].trim()) : 18;
+                let hF = (partes[1].trim() !== "") ? parseInt(partes[1].trim()) : 23;
                 config.abertura = hA.toString();
                 config.fechamento = hF.toString();
             }
@@ -1373,7 +1414,6 @@ window.preencherConfiguracoesAdmin = async function() {
     const configAtual = await carregarConfiguracoesRestaurante();
     
     const fieldsMapping = {
-        'lojaFechadaManualmente': 'fechada_manualmente',
         'inputFreteGratis': 'frete_gratis_valor',
         'inputPedidoMinimo': 'pedido_minimo',
         'inputWhatsapp': 'whatsapp',
@@ -1381,7 +1421,8 @@ window.preencherConfiguracoesAdmin = async function() {
         'inputTaxa': 'taxa_entrega',
         'inputCupons': 'cupons',
         'inputCategoriasCustom': 'categorias_custom',
-        'inputDescricaoLoja': 'descricao_lo_ja'
+        'inputDescricaoLoja': 'descricao_loja',
+        'inputTempo': 'tempo_entrega'
     };
 
     for (let id in fieldsMapping) {
@@ -1405,19 +1446,9 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         
         const configAtual = await carregarConfiguracoesRestaurante();
-        const novaAgenda = {};
-        DIAS_SEMANA.forEach(dia => {
-            novaAgenda[dia] = {
-                aberto: document.getElementById(`check-${dia}`).checked,
-                inicio: document.getElementById(`start-${dia}`).value,
-                fim: document.getElementById(`end-${dia}`).value
-            };
-        });
 
         const novasConfigs = {
             ...configAtual,
-            agenda_semanal: novaAgenda,
-            fechada_manualmente: document.getElementById('lojaFechadaManualmente').checked,
             frete_gratis_valor: document.getElementById('inputFreteGratis').value,
             pedido_minimo: document.getElementById('inputPedidoMinimo').value,
             whatsapp: document.getElementById('inputWhatsapp').value,
@@ -1425,7 +1456,8 @@ document.addEventListener('DOMContentLoaded', () => {
             taxa_entrega: document.getElementById('inputTaxa').value,
             cupons: document.getElementById('inputCupons').value,
             categorias_custom: document.getElementById('inputCategoriasCustom').value,
-            descricao_loja: document.getElementById('inputDescricaoLoja').value
+            descricao_loja: document.getElementById('inputDescricaoLoja').value,
+            tempo_entrega: document.getElementById('inputTempo').value
         };
 
         // Força a criação do slug se ele não existir ou se o nome de exibição for válido
@@ -1471,6 +1503,19 @@ async function atualizarSelectCategorias() {
     select.innerHTML = todas.map(c => `<option value="${c}">${c}</option>`).join('');
     if (todas.includes(valorAtual)) select.value = valorAtual;
 }
+
+// Excluir produto
+window.excluirProduto = async function(id) {
+    if (confirm('Tem certeza que deseja excluir este produto?')) {
+        try {
+            await db.collection('produtos').doc(id).delete();
+            showToast('Produto removido com sucesso!');
+            await atualizarListaAdmin();
+        } catch (error) {
+            showToast('Erro ao excluir do banco', 'error');
+        }
+    }
+};
 
 // Excluir produto
 window.excluirProduto = async function(id) {

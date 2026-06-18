@@ -26,13 +26,7 @@
                 <span>Entrar / Cadastrar</span>
             </div>
         </div>
-        <div class="top-nav-right">
-            <div id="meus-pedidos-btn" class="auth-trigger" style="display:none;" onclick="abrirMeusPedidos()">
-                <i data-lucide="package"></i>
-                <span>Meus Pedidos</span>
-            </div>
-            <div class="top-nav-title" style="font-weight: 800; color: var(--text-muted);">👨‍🍳 Painel Admin</div>
-        </div>
+
     </nav>
 
     <header class="admin-header">
@@ -41,7 +35,7 @@
                 <i data-lucide="image-plus"></i>
             </div>
             <button onclick="logout()" class="btn-secondary" title="Sair do Painel">
-                <i data-lucide="log-out" style="width:20px; height:20px;"></i>
+                <i data-lucide="log-out"></i>
             </button>
             <input type="file" id="input-edit-cover" hidden accept="image/*" onchange="handleInlineImageUpload(this, 'banner_header')">
         </div>
@@ -71,11 +65,13 @@
         </div>
     </header>
 
-    <nav class="admin-nav">
-        <a onclick="showSection('dashboard')" class="nav-item active" id="nav-dashboard"><i data-lucide="layout-dashboard" style="width:18px"></i> Visão Geral</a>
-        <a onclick="showSection('cardapio')" class="nav-item" id="nav-cardapio"><i data-lucide="book-open" style="width:18px"></i> Meu Cardápio</a>
-        <a onclick="showSection('config')" class="nav-item" id="nav-config"><i data-lucide="settings" style="width:18px"></i> Configurações</a>
-    </nav>
+    <div class="admin-nav-wrapper">
+        <nav class="admin-nav">
+            <a onclick="showSection('dashboard')" class="nav-item active" id="nav-dashboard"><i data-lucide="layout-dashboard"></i> Visão Geral</a>
+            <a onclick="showSection('cardapio')" class="nav-item" id="nav-cardapio"><i data-lucide="book-open"></i> Meu Cardápio</a>
+            <a onclick="showSection('config')" class="nav-item" id="nav-config"><i data-lucide="settings"></i> Configurações</a>
+        </nav>
+    </div>
 
     <div class="container">
         <!-- SEÇÃO: DASHBOARD -->
@@ -83,7 +79,7 @@
             <div class="last-order-banner" style="background: #e0f2fe; border-color: #bae6fd; margin-bottom: 20px;">
                 <h4 style="text-align: left; margin-bottom: 5px;">Link da sua Loja:</h4>
                 <code id="link-loja-exibicao" style="background: white; padding: 5px 10px; border-radius: 5px; display: block; margin-bottom: 10px;"></code>
-                <button onclick="copiarLinkLoja()" class="btn-edit" style="margin-top:0; padding: 5px 15px;">Copiar Link para Clientes</button>
+                <button onclick="copiarLinkLoja()" class="btn-edit" style="margin-top:0; padding: 5px 15px; background: #0ea5e9;">Copiar Link</button>
             </div>
 
             <h2>Relatório de Vendas (Hoje)</h2>
@@ -97,7 +93,7 @@
                     <h3 id="report-faturamento">R$ 0.00</h3>
                 </div>
                 <div class="report-card">
-                    <button onclick="limparHistoricoVendas()" class="btn-danger" style="margin-top:0; font-size: 0.8rem;">Zerar Relatório</button>
+                    <button onclick="limparHistoricoVendas()" class="btn-danger" style="margin-top:0; font-size: 0.8rem; width: 100%;">Zerar Relatório</button>
                 </div>
             </div>
 
@@ -148,60 +144,70 @@
             <div class="section-header">
                 <h2>Configurações da Loja</h2>
             </div>
-            <div class="card" style="max-width: 600px; margin: 0 auto; text-align: left; padding: 25px;">
-                <form id="configLojaForm">
-                    <h3 style="text-align: left; margin-bottom: 15px;">Horários de Funcionamento</h3>
-                    <div id="weekly-hours-config" style="margin-bottom: 25px; display: grid; gap: 10px; background: #f8fafc; padding: 15px; border-radius: 12px;">
-                        <!-- Gerado dinamicamente via JS -->
-                    </div>
-                    <hr>
+            <form id="configLojaForm" class="config-form-grid">
+                <!-- Card de Identidade -->
+                <div class="card config-card">
+                    <h3 class="config-card-title">Identidade da Loja</h3>
                     <div class="form-group">
-                        <label>Logo do Restaurante</label>
+                        <label>Logo (PNG ou JPG)</label>
                         <input type="file" id="inputLogo" accept="image/*">
                     </div>
                     <div class="form-group">
-                        <label>Slogan / Descrição da Loja</label>
+                        <label>Slogan / Descrição Curta</label>
                         <input type="text" id="inputDescricaoLoja" placeholder="O melhor sabor no conforto da sua casa">
                     </div>
                     <div class="form-group">
-                        <label>WhatsApp (DDI+DDD+Número)</label>
+                        <label>Tempo Médio de Entrega (ex: 30-50 min)</label>
+                        <input type="text" id="inputTempo" placeholder="Ex: 30-50 min">
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp para receber pedidos</label>
                         <input type="text" id="inputWhatsapp" placeholder="5516999999999">
                     </div>
+                </div>
+
+                <!-- Card Financeiro -->
+                <div class="card config-card">
+                    <h3 class="config-card-title">Financeiro e Entrega</h3>
+                    <div class="form-group">
+                        <label>Taxa de Entrega Fixa (R$)</label>
+                        <input type="number" id="inputTaxa" step="0.01" placeholder="5.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Valor para Frete Grátis (R$)</label>
+                        <input type="number" id="inputFreteGratis" step="0.01" placeholder="100.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Pedido Mínimo (R$)</label>
+                        <input type="number" id="inputPedidoMinimo" step="0.01" placeholder="20.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Chave PIX para pagamentos</label>
+                        <input type="text" id="inputPix" placeholder="email@dominio.com ou CPF">
+                    </div>
+                </div>
+
+                <!-- Card de Marketing -->
+                <div class="card config-card">
+                    <h3 class="config-card-title">Marketing e Aparência</h3>
                     <div class="form-group">
                         <label>Banners de Promoção (Um ou mais)</label>
                         <input type="file" id="inputBanners" accept="image/*" multiple>
-                    </div>
-                    <div class="form-group">
-                        <label>Chave PIX</label>
-                        <input type="text" id="inputPix" placeholder="Chave PIX">
                     </div>
                     <div class="form-group">
                         <label>Categorias Adicionais (Separadas por vírgula)</label>
                         <input type="text" id="inputCategoriasCustom" placeholder="Artesanais, Porções, Vinhos...">
                     </div>
                     <div class="form-group">
-                        <label>Cupons (CODIGO:VALOR, ...)</label>
-                        <textarea id="inputCupons" rows="2" placeholder="PROMO10:10.00"></textarea>
+                        <label>Cupons de Desconto (CODIGO:VALOR)</label>
+                        <textarea id="inputCupons" rows="2" placeholder="PROMO10:10, BEMVINDO:5"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label>Taxa de Entrega Fixa (R$)</label>
-                        <input type="number" id="inputTaxa" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label>Frete Grátis acima de (R$)</label>
-                        <input type="number" id="inputFreteGratis" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label>Pedido Mínimo (R$)</label>
-                        <input type="number" id="inputPedidoMinimo" step="0.01">
-                    </div>
-                    <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
-                        <input type="checkbox" id="lojaFechadaManualmente" style="width: auto;">
-                        <label for="lojaFechadaManualmente" style="margin: 0; color: var(--danger); font-weight: bold;">Fechar Loja Manualmente</label>
-                    </div>
-                    <button type="submit" class="btn-add" style="width: 100%;">Salvar Configurações</button>
-                </form>
-            </div>
+                </div>
+
+                <div class="config-submit-bar">
+                    <button type="submit" class="btn-add" style="width: auto; padding: 12px 40px;">Salvar Todas as Configurações</button>
+                </div>
+            </form>
         </section>
     </div>
 
