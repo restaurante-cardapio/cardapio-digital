@@ -477,7 +477,8 @@ window.processarAuth = async function(e) {
                 // Passa o UID do usuário recém-criado para o upload
                 let logoUrl = logoFile ? await uploadParaStorage(logoFile, 'loja', user.uid) : "";
                 
-                const slug = gerarSlug(name);
+                const enderecoEl = document.getElementById('auth-endereco');
+                const enderecoVal = enderecoEl ? enderecoEl.value.trim() : "";
 
                 // 2. Salva Configurações da Loja
                 await db.collection('configuracoes').doc(email).set({
@@ -487,6 +488,7 @@ window.processarAuth = async function(e) {
                     fechamento: hFechamento.toString(),
                     logo: logoUrl,
                     slug: slug,
+                    endereco: enderecoVal,
                     owner: email
                 }, { merge: true });
             }
@@ -1229,7 +1231,8 @@ window.ativarEdicaoInline = function(campo) {
         nome: 'admin-nome-loja',
         descricao: 'admin-descricao-loja',
         horario: 'admin-horario-display',
-        tempo: 'admin-tempo-display'
+        tempo: 'admin-tempo-display',
+        endereco: 'admin-endereco-display'
     };
 
     // Define limites de caracteres para cada campo
@@ -1237,7 +1240,8 @@ window.ativarEdicaoInline = function(campo) {
         nome: 35,
         descricao: 80, // Limite ideal para manter em duas linhas no cardápio
         horario: 20,
-        tempo: 15
+        tempo: 15,
+        endereco: 100
     };
     
     const el = document.getElementById(IDs[campo]);
@@ -1317,6 +1321,7 @@ window.salvarConfigRapida = async function(campo, valor) {
             let val = valor.toLowerCase().includes('min') ? valor : valor + ' min';
             config.tempo_entrega = val;
         }
+        if (campo === 'endereco') config.endereco = valor;
         if (campo === 'horario') {
             const partes = valor.replace(/h/g, '').split(/[-–]/);
             if (partes.length === 2) {
@@ -1366,6 +1371,11 @@ async function renderizarHeaderAdmin() {
     document.getElementById('admin-descricao-loja').innerText = config.descricao_loja || "O melhor sabor no conforto da sua casa";
     document.getElementById('admin-horario-display').innerText = `${config.abertura || 18}h - ${config.fechamento || 23}h`;
     document.getElementById('admin-tempo-display').innerText = config.tempo_entrega || '30-50 min';
+    
+    const adminEnderecoEl = document.getElementById('admin-endereco-display');
+    if (adminEnderecoEl) {
+        adminEnderecoEl.innerText = config.endereco || 'Definir Endereço';
+    }
 
     if (config.logo) {
         const logo = document.getElementById('logo-admin');
@@ -1422,7 +1432,8 @@ window.preencherConfiguracoesAdmin = async function() {
         'inputCupons': 'cupons',
         'inputCategoriasCustom': 'categorias_custom',
         'inputDescricaoLoja': 'descricao_loja',
-        'inputTempo': 'tempo_entrega'
+        'inputTempo': 'tempo_entrega',
+        'inputEndereco': 'endereco'
     };
 
     for (let id in fieldsMapping) {
@@ -1457,7 +1468,8 @@ document.addEventListener('DOMContentLoaded', () => {
             cupons: document.getElementById('inputCupons').value,
             categorias_custom: document.getElementById('inputCategoriasCustom').value,
             descricao_loja: document.getElementById('inputDescricaoLoja').value,
-            tempo_entrega: document.getElementById('inputTempo').value
+            tempo_entrega: document.getElementById('inputTempo').value,
+            endereco: document.getElementById('inputEndereco').value
         };
 
         // Força a criação do slug se ele não existir ou se o nome de exibição for válido

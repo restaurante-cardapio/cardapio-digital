@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cardápio Digital - Meu Restaurante</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <!-- Splash Screen Criativa -->
     <div id="splash-screen" class="splash-screen">
@@ -45,11 +47,18 @@
                 <p id="descricao-loja-header">O melhor sabor no conforto da sua casa</p>
                 <div style="display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <div id="status-loja-display"></div>
-                    <div id="tempo-entrega-display" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: none;">
+                    <div id="tempo-entrega-display"
+                        style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: none;">
                         🕒 <span id="tempo-min-max"></span>
                     </div>
                 </div>
-                <div id="pontos-fidelidade" class="loyalty-badge" style="display: none; margin-top: 8px;"></div>
+                <div style="display: flex; justify-content: center; margin-top: 8px;">
+                    <div id="endereco-loja-display" class="store-address-badge" style="display: none;"
+                        onclick="window.abrirGoogleMaps()">
+                        <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i> <span
+                            id="endereco-loja-texto"></span>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -61,9 +70,11 @@
                     <div>
                         <span class="badge" style="color: #92400e;">Recompra</span>
                         <h4 style="margin: 5px 0 0 0;">Repetir último pedido?</h4>
-                        <p id="detalhes-ultimo-pedido" style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);"></p>
+                        <p id="detalhes-ultimo-pedido"
+                            style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);"></p>
                     </div>
-                    <button onclick="repetirUltimoPedido()" class="btn-add" style="margin-top: 0; padding: 8px 16px; background: #f59e0b;">Repetir</button>
+                    <button onclick="repetirUltimoPedido()" class="btn-add"
+                        style="margin-top: 0; padding: 8px 16px; background: #f59e0b;">Repetir</button>
                 </div>
             </div>
 
@@ -76,10 +87,14 @@
                 <button class="filter-btn" data-filter="Lanches" onclick="filtrar('Lanches')">🍔 Lanches</button>
                 <button class="filter-btn" data-filter="Pizzas" onclick="filtrar('Pizzas')">🍕 Pizzas</button>
                 <button class="filter-btn" data-filter="Bebidas" onclick="filtrar('Bebidas')">🥤 Bebidas</button>
-                <button class="filter-btn" data-filter="Sobremesas" onclick="filtrar('Sobremesas')">🍦 Sobremesas</button>
-                <button class="filter-btn tag-filter" data-filter="tagVeggie" onclick="filtrar('tagVeggie')">🥦 Veggie</button>
-                <button class="filter-btn tag-filter" data-filter="tagSpicy" onclick="filtrar('tagSpicy')">🌶️ Picante</button>
-                <button class="filter-btn tag-filter" data-filter="tagFeatured" onclick="filtrar('tagFeatured')">⭐ Destaque</button>
+                <button class="filter-btn" data-filter="Sobremesas" onclick="filtrar('Sobremesas')">🍦
+                    Sobremesas</button>
+                <button class="filter-btn tag-filter" data-filter="tagVeggie" onclick="filtrar('tagVeggie')">🥦
+                    Veggie</button>
+                <button class="filter-btn tag-filter" data-filter="tagSpicy" onclick="filtrar('tagSpicy')">🌶️
+                    Picante</button>
+                <button class="filter-btn tag-filter" data-filter="tagFeatured" onclick="filtrar('tagFeatured')">⭐
+                    Destaque</button>
             </div>
 
             <div id="cardapio-secoes">
@@ -103,13 +118,24 @@
             </div>
             <button onclick="abrirResumo()" class="btn-cart-action">Ver Sacola</button>
         </div>
+
+        <!-- Rodapé Legal -->
+        <footer class="legal-footer">
+            <p>Powered by <strong>CardápioDigital</strong></p>
+            <div class="legal-footer-links">
+                <a href="termos.html" target="_blank">Termos de Uso</a>
+                <span>·</span>
+                <a href="privacidade.html" target="_blank">Privacidade</a>
+            </div>
+        </footer>
     </div>
 
     <!-- Apresentação da Plataforma (Home Page) -->
     <div id="platform-landing" style="display: none;">
         <section class="landing-hero">
             <h1>Transforme seu Restaurante com um Cardápio Digital</h1>
-            <p>Crie sua loja online, receba pedidos organizados no WhatsApp e fidelize seus clientes com uma experiência profissional.</p>
+            <p>Crie sua loja online, receba pedidos organizados no WhatsApp e fidelize seus clientes com uma experiência
+                profissional.</p>
             <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
                 <button onclick="abrirModalAuth()" class="btn-hero-main">Começar Agora Grátis 🚀</button>
             </div>
@@ -120,17 +146,19 @@
                 <div class="feature-card-landing">
                     <div class="feature-icon-circle">🛵</div>
                     <h3>Pedidos no WhatsApp</h3>
-                    <p>Esqueça a bagunça. Receba pedidos formatados com endereço, itens e forma de pagamento direto no seu Whats.</p>
+                    <p>Esqueça a bagunça. Receba pedidos formatados com endereço, itens e forma de pagamento direto no
+                        seu Whats.</p>
                 </div>
                 <div class="feature-card-landing">
                     <div class="feature-icon-circle">📊</div>
                     <h3>Gestão de Estoque</h3>
-                    <p>Controle seus pratos, pause vendas de itens esgotados e acompanhe seu faturamento em tempo real.</p>
+                    <p>Controle seus pratos, pause vendas de itens esgotados e acompanhe seu faturamento em tempo real.
+                    </p>
                 </div>
                 <div class="feature-card-landing">
                     <div class="feature-icon-circle">🎁</div>
                     <h3>Fidelize Clientes</h3>
-                    <p>Cupons de desconto, sistema de pontos por compra e links de indicação para crescer organicamente.</p>
+                    <p>Cupons de desconto e links de indicação para crescer organicamente.</p>
                 </div>
             </div>
         </div>
@@ -141,10 +169,11 @@
         <div class="modal-content">
             <button onclick="closeModal('modal-auth')" class="btn-close-modal"><i data-lucide="x"></i></button>
             <h2 id="auth-modal-title" style="margin-bottom: 20px;">Acesse sua conta</h2>
-            
+
             <div class="auth-mode-switch">
                 <button id="btn-mode-login" class="auth-mode-btn active" onclick="setAuthMode('login')">Login</button>
-                <button id="btn-mode-register" class="auth-mode-btn" onclick="setAuthMode('register')">Cadastrar</button>
+                <button id="btn-mode-register" class="auth-mode-btn"
+                    onclick="setAuthMode('register')">Cadastrar</button>
             </div>
 
             <form id="form-auth-dynamic" onsubmit="window.processarAuth(event)">
@@ -158,13 +187,18 @@
                         <label>Senha</label>
                         <div class="password-wrapper">
                             <input type="password" id="auth-pass" name="auth-pass" placeholder="••••">
-                            <button type="button" class="toggle-password" onclick="window.togglePasswordVisibility('auth-pass')">
+                            <button type="button" class="toggle-password"
+                                onclick="window.togglePasswordVisibility('auth-pass')">
                                 <i data-lucide="eye"></i>
                             </button>
                         </div>
                     </div>
-                    <p style="text-align: right; margin-bottom: 15px;"><a href="#" onclick="window.esqueciSenha()" style="font-size: 0.8rem; color: var(--text-muted); text-decoration: none;">Esqueci minha senha</a></p>
-                    <button type="submit" id="btn-auth-submit" class="btn-add" style="width: 100%; margin-top: 10px;">Entrar</button>
+                    <p style="text-align: right; margin-bottom: 15px;"><a href="#" onclick="window.esqueciSenha()"
+                            style="font-size: 0.8rem; color: var(--text-muted); text-decoration: none;">Esqueci minha
+                            senha</a></p>
+                    <button type="submit" id="btn-auth-submit" class="btn-add"
+                        style="width: 100%; margin-top: 10px;">Entrar</button>
+
                 </div>
 
                 <!-- REGISTER WIZARD -->
@@ -181,12 +215,15 @@
                         <div class="form-group">
                             <label>Qual seu perfil?</label>
                             <div class="role-selector">
-                                <div class="role-option active" data-role="comprador" onclick="updateRoleSelection('comprador')">🛍️ Cliente</div>
-                                <div class="role-option" data-role="restaurante" onclick="updateRoleSelection('restaurante')">👨‍🍳 Restaurante</div>
+                                <div class="role-option active" data-role="comprador"
+                                    onclick="updateRoleSelection('comprador')">🛍️ Cliente</div>
+                                <div class="role-option" data-role="restaurante"
+                                    onclick="updateRoleSelection('restaurante')">👨‍🍳 Restaurante</div>
                             </div>
                             <input type="hidden" id="auth-role" value="comprador">
                         </div>
-                        <button type="button" onclick="window.changeRegisterStep(2)" class="btn-add" style="width:100%">Continuar →</button>
+                        <button type="button" onclick="window.changeRegisterStep(2)" class="btn-add"
+                            style="width:100%">Continuar →</button>
                     </div>
 
                     <!-- Passo 2: Dados Básicos -->
@@ -203,18 +240,23 @@
                             <label>Crie uma Senha</label>
                             <div class="password-wrapper">
                                 <input type="password" id="auth-pass-reg" name="auth-pass-reg" placeholder="••••">
-                                <button type="button" class="toggle-password" onclick="window.togglePasswordVisibility('auth-pass-reg')">
+                                <button type="button" class="toggle-password"
+                                    onclick="window.togglePasswordVisibility('auth-pass-reg')">
                                     <i data-lucide="eye"></i>
                                 </button>
                             </div>
                             <div class="password-strength-container" id="strength-meter">
-                                <div class="password-strength-bar"><div class="password-strength-progress" id="strength-bar"></div></div>
+                                <div class="password-strength-bar">
+                                    <div class="password-strength-progress" id="strength-bar"></div>
+                                </div>
                                 <span class="password-strength-text" id="strength-text"></span>
                             </div>
                         </div>
                         <div class="step-nav-buttons">
-                            <button type="button" onclick="window.changeRegisterStep(1)" class="btn-edit" style="background:#64748b; flex:1">Voltar</button>
-                            <button type="button" onclick="window.changeRegisterStep(3)" class="btn-add" style="flex:2">Próximo</button>
+                            <button type="button" onclick="window.changeRegisterStep(1)" class="btn-edit"
+                                style="background:#64748b; flex:1">Voltar</button>
+                            <button type="button" onclick="window.changeRegisterStep(3)" class="btn-add"
+                                style="flex:2">Próximo</button>
                         </div>
                     </div>
 
@@ -225,9 +267,12 @@
                             <input type="tel" id="auth-phone" placeholder="(00) 00000-0000">
                         </div>
                         <div class="step-nav-buttons">
-                            <button type="button" onclick="window.changeRegisterStep(2)" class="btn-edit" style="background:#64748b; flex:1">Voltar</button>
-                            <button type="button" id="btn-next-to-4" onclick="window.changeRegisterStep(4)" class="btn-add" style="flex:2">Próximo</button>
-                            <button type="submit" id="btn-finish-3" class="btn-add" style="flex:2; display:none; margin-top:0">Finalizar</button>
+                            <button type="button" onclick="window.changeRegisterStep(2)" class="btn-edit"
+                                style="background:#64748b; flex:1">Voltar</button>
+                            <button type="button" id="btn-next-to-4" onclick="window.changeRegisterStep(4)"
+                                class="btn-add" style="flex:2">Próximo</button>
+                            <button type="submit" id="btn-finish-3" class="btn-add"
+                                style="flex:2; display:none; margin-top:0">Finalizar</button>
                         </div>
                     </div>
 
@@ -242,22 +287,34 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label>Endereço do Restaurante (Rua, Número, Bairro, Cidade)</label>
+                            <input type="text" id="auth-endereco" placeholder="Ex: Av. Paulista, 1000 - São Paulo, SP">
+                        </div>
+                        <div class="form-group">
                             <label>Foto ou Logo da Loja</label>
-                            <input type="file" id="auth-logo" accept="image/*" onchange="window.handleRegisterImagePreview(this)">
+                            <input type="file" id="auth-logo" accept="image/*"
+                                onchange="window.handleRegisterImagePreview(this)">
                             <div id="auth-logo-preview-container" class="image-preview-container">
                                 <img id="auth-logo-preview-img" src="" alt="Prévia da Logo">
-                                <button type="button" class="btn-remove-preview" onclick="window.limparRegisterPreview()" title="Remover imagem"><i data-lucide="trash-2" style="width: 16px;"></i></button>
+                                <button type="button" class="btn-remove-preview"
+                                    onclick="window.limparRegisterPreview()" title="Remover imagem"><i
+                                        data-lucide="trash-2" style="width: 16px;"></i></button>
                             </div>
                         </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                        </div>
                         <div class="step-nav-buttons">
-                            <button type="button" onclick="window.changeRegisterStep(3)" class="btn-edit" style="background:#64748b; flex:1">Voltar</button>
+                            <button type="button" onclick="window.changeRegisterStep(3)" class="btn-edit"
+                                style="background:#64748b; flex:1">Voltar</button>
                             <button type="submit" class="btn-add" style="flex:2; margin-top:0">Cadastrar</button>
                         </div>
                     </div>
                 </div>
 
-                <div id="btn-logout-area" style="display: none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-                    <button type="button" onclick="logout()" class="btn-danger" style="width: 100%; margin:0;">Sair da Conta</button>
+                <div id="btn-logout-area"
+                    style="display: none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <button type="button" onclick="logout()" class="btn-danger" style="width: 100%; margin:0;">Sair da
+                        Conta</button>
                 </div>
             </form>
         </div>
@@ -277,7 +334,8 @@
     <!-- Modal de Resumo -->
     <div id="modal-carrinho" class="modal">
         <div class="modal-content">
-            <button onclick="closeModal('modal-carrinho')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
+            <button onclick="closeModal('modal-carrinho')" class="btn-close-modal" title="Fechar"><i
+                    data-lucide="x"></i></button>
             <div class="step-progress-container">
                 <div class="step-dot active" data-step="1">1</div>
                 <div class="step-dot" data-step="2">2</div>
@@ -288,7 +346,7 @@
             <!-- PASSO 1: Identificação -->
             <div class="checkout-step active" id="step-1">
                 <h2 style="text-align: left; font-size: 1.6rem; margin-bottom: 20px;">Identificação</h2>
-                
+
                 <!-- Seção de Endereços Salvos (para usuários logados) -->
                 <div id="enderecos-salvos-container" style="display: none; margin-bottom: 25px;">
                     <div class="checkout-section-title">⭐ Meus Endereços</div>
@@ -297,8 +355,10 @@
 
                 <div class="checkout-section-title">📍 Como deseja receber?</div>
                 <div class="role-selector" style="margin-bottom: 20px;">
-                    <div class="role-option active order-type-option" data-type="Entrega" onclick="updateOrderTypeSelection('Entrega')">🛵 Entrega</div>
-                    <div class="role-option order-type-option" data-type="Retirada" onclick="updateOrderTypeSelection('Retirada')">🥡 Retirada</div>
+                    <div class="role-option active order-type-option" data-type="Entrega"
+                        onclick="updateOrderTypeSelection('Entrega')">🛵 Entrega</div>
+                    <div class="role-option order-type-option" data-type="Retirada"
+                        onclick="updateOrderTypeSelection('Retirada')">🥡 Retirada</div>
                 </div>
                 <input type="hidden" id="tipo-pedido-toggle-hidden" value="Entrega">
 
@@ -329,20 +389,25 @@
                         <input type="text" id="rua-cliente" placeholder="Preencha o CEP para autocompletar">
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;"><label>Bairro</label><input type="text" id="bairro-cliente" placeholder="Bairro"></div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;"><label>Cidade</label><input type="text" id="cidade-cliente" placeholder="Cidade"></div>
-                        <div class="form-group" style="flex: 0.5; margin-bottom: 0;"><label>UF</label><input type="text" id="estado-cliente" placeholder="UF" maxlength="2"></div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;"><label>Bairro</label><input
+                                type="text" id="bairro-cliente" placeholder="Bairro"></div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;"><label>Cidade</label><input
+                                type="text" id="cidade-cliente" placeholder="Cidade"></div>
+                        <div class="form-group" style="flex: 0.5; margin-bottom: 0;"><label>UF</label><input type="text"
+                                id="estado-cliente" placeholder="UF" maxlength="2"></div>
                     </div>
                     <!-- Checkbox para salvar o endereço -->
                     <div class="form-group" style="margin-top: 20px; text-align: left;" id="salvar-endereco-container">
-                        <label style="display: flex; align-items: center; gap: 10px; font-weight: normal; cursor: pointer;">
+                        <label
+                            style="display: flex; align-items: center; gap: 10px; font-weight: normal; cursor: pointer;">
                             <input type="checkbox" id="salvar-endereco-check" style="width: auto;">
                             <span>Salvar este endereço para futuras compras</span>
                         </label>
                     </div>
                 </div>
                 <div class="step-nav-buttons">
-                    <button onclick="closeModal('modal-carrinho')" class="btn-edit" style="background:#64748b; flex:1">Sair</button>
+                    <button onclick="closeModal('modal-carrinho')" class="btn-edit"
+                        style="background:#64748b; flex:1">Sair</button>
                     <button onclick="changeStep(2)" class="btn-add" style="flex:2">Avançar →</button>
                 </div>
             </div>
@@ -350,11 +415,13 @@
             <!-- PASSO 2: Upsell -->
             <div class="checkout-step" id="step-2">
                 <h2 style="text-align: left; font-size: 1.5rem;">Turbine seu pedido!</h2>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Aproveite e adicione um acompanhamento:</p>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Aproveite e adicione um
+                    acompanhamento:</p>
                 <div id="modern-upsell-list" class="modern-selection-grid"></div>
 
                 <div class="step-nav-buttons">
-                    <button onclick="changeStep(1)" class="btn-edit" style="background:#64748b; flex:1">← Voltar</button>
+                    <button onclick="changeStep(1)" class="btn-edit" style="background:#64748b; flex:1">←
+                        Voltar</button>
                     <button onclick="changeStep(3)" class="btn-add" style="flex:2">Ver Bebidas →</button>
                 </div>
             </div>
@@ -365,7 +432,8 @@
                 <div id="modern-beverages-list" class="modern-selection-grid"></div>
 
                 <div class="step-nav-buttons">
-                    <button onclick="changeStep(2)" class="btn-edit" style="background:#64748b; flex:1">← Voltar</button>
+                    <button onclick="changeStep(2)" class="btn-edit" style="background:#64748b; flex:1">←
+                        Voltar</button>
                     <button onclick="changeStep(4)" class="btn-add" style="flex:2">Pagar Agora →</button>
                 </div>
             </div>
@@ -409,7 +477,8 @@
 
                 <div class="form-group">
                     <label>Observações Gerais</label>
-                    <textarea id="observacoes" rows="2" placeholder="Observações sobre a entrega ou retirada..."></textarea>
+                    <textarea id="observacoes" rows="2"
+                        placeholder="Observações sobre a entrega ou retirada..."></textarea>
                 </div>
 
                 <div class="form-group">
@@ -440,8 +509,10 @@
                 </div>
 
                 <div class="step-nav-buttons">
-                    <button onclick="changeStep(3)" class="btn-edit" style="background:#64748b; flex:1">← Voltar</button>
-                    <button onclick="finalizarPedido()" class="btn-add" style="flex:2; background:var(--success)">Enviar no WhatsApp 🚀</button>
+                    <button onclick="changeStep(3)" class="btn-edit" style="background:#64748b; flex:1">←
+                        Voltar</button>
+                    <button onclick="finalizarPedido()" class="btn-add" style="flex:2; background:var(--success)">Enviar
+                        no WhatsApp 🚀</button>
                 </div>
             </div>
         </div>
@@ -450,54 +521,71 @@
     <!-- Modal de PIX -->
     <div id="modal-pix" class="modal">
         <div class="modal-content" style="text-align: center;">
-            <button onclick="closeModal('modal-pix')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
+            <button onclick="closeModal('modal-pix')" class="btn-close-modal" title="Fechar"><i
+                    data-lucide="x"></i></button>
             <h2 style="color: #32bcad;">Pagamento via PIX</h2>
             <p>Seu pedido foi enviado! Para agilizar a preparação, realize o pagamento agora:</p>
-            <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin: 20px 0; word-break: break-all;">
+            <div
+                style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin: 20px 0; word-break: break-all;">
                 <strong id="chave-pix-valor"></strong>
             </div>
-            <button onclick="copiarPix()" class="btn-add" style="background: #32bcad; width: 100%;">Copiar Chave PIX</button>
-            <button onclick="window.location.reload()" style="background: none; border: none; color: var(--text-muted); margin-top: 15px; cursor: pointer;">Fechar e Voltar ao Início</button>
+            <button onclick="copiarPix()" class="btn-add" style="background: #32bcad; width: 100%;">Copiar Chave
+                PIX</button>
+            <button onclick="window.location.reload()"
+                style="background: none; border: none; color: var(--text-muted); margin-top: 15px; cursor: pointer;">Fechar
+                e Voltar ao Início</button>
         </div>
     </div>
 
     <!-- Modal: Indique e Ganhe -->
     <div id="modal-referral" class="modal">
         <div class="modal-content" style="text-align: center;">
-            <button onclick="closeModal('modal-referral')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
+            <button onclick="closeModal('modal-referral')" class="btn-close-modal" title="Fechar"><i
+                    data-lucide="x"></i></button>
             <h2 style="color: #4f46e5;">Indique um Amigo</h2>
-            <p style="color: var(--text-muted); margin-bottom: 20px;">Ao compartilhar seu link, seu amigo ganha um cupom automático para o primeiro pedido!</p>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Ao compartilhar seu link, seu amigo ganha um cupom
+                automático para o primeiro pedido!</p>
             <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
                 <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">Seu link de indicação:</p>
-                <code id="referral-link-display" style="word-break: break-all; font-weight: bold; color: #4f46e5;"></code>
+                <code id="referral-link-display"
+                    style="word-break: break-all; font-weight: bold; color: #4f46e5;"></code>
             </div>
-            <button onclick="compartilharIndicacao()" class="btn-add" style="width: 100%; background: #4f46e5;">Compartilhar no WhatsApp</button>
-            <button onclick="closeModal('modal-referral')" style="background: none; border: none; color: var(--text-muted); width: 100%; margin-top: 15px; cursor: pointer;">Fechar</button>
+            <button onclick="compartilharIndicacao()" class="btn-add"
+                style="width: 100%; background: #4f46e5;">Compartilhar no WhatsApp</button>
+            <button onclick="closeModal('modal-referral')"
+                style="background: none; border: none; color: var(--text-muted); width: 100%; margin-top: 15px; cursor: pointer;">Fechar</button>
         </div>
     </div>
 
     <!-- Modal de Sucesso -->
     <div id="modal-success" class="modal">
         <div class="modal-content" style="text-align: center;">
-            <button onclick="closeModal('modal-success')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
+            <button onclick="closeModal('modal-success')" class="btn-close-modal" title="Fechar"><i
+                    data-lucide="x"></i></button>
             <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-                <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
-                <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none" />
+                <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
             </svg>
             <h2 style="color: var(--success); margin-top: 10px;">Pedido Enviado!</h2>
-            <p style="color: var(--text-muted); margin-top: 10px;">Seu pedido foi encaminhado com sucesso. Agora é só aguardar!</p>
-            <button onclick="window.location.reload()" class="btn-add" style="width: 100%; margin-top: 25px; background: var(--success);">Confirmar</button>
+            <p style="color: var(--text-muted); margin-top: 10px;">Seu pedido foi encaminhado com sucesso. Agora é só
+                aguardar!</p>
+            <button onclick="window.location.reload()" class="btn-add"
+                style="width: 100%; margin-top: 25px; background: var(--success);">Confirmar</button>
         </div>
     </div>
 
     <!-- MODAL: DETALHES DO PRODUTO (Assumindo que este modal existe ou será criado) -->
     <div id="modal-detalhes-produto" class="modal">
         <div class="modal-content">
-            <button onclick="closeModal('modal-detalhes-produto')" class="btn-close-modal" title="Fechar"><i data-lucide="x"></i></button>
+            <button onclick="closeModal('modal-detalhes-produto')" class="btn-close-modal" title="Fechar"><i
+                    data-lucide="x"></i></button>
             <h2 id="detalhe-nome" style="text-align: left; margin-bottom: 10px;">Nome do Produto</h2>
-            <p id="detalhe-descricao" style="text-align: left; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Descrição do produto.</p>
+            <p id="detalhe-descricao"
+                style="text-align: left; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Descrição do
+                produto.</p>
 
-            <div id="detalhe-combo-items" style="display: none; background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left;">
+            <div id="detalhe-combo-items"
+                style="display: none; background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left;">
                 <!-- Combo items will be listed here -->
             </div>
 
@@ -547,7 +635,7 @@
         window.urlParams = new URLSearchParams(window.location.search);
         let restauranteAtual;
         window.configLoja = null; // Inicializado como null para garantir carregamento limpo
-        let WHATSAPP_RESTAURANTE = ""; 
+        let WHATSAPP_RESTAURANTE = "";
         let TAXA_ENTREGA = 0;
         let PEDIDO_MINIMO = 0;
         let FRETE_GRATIS_VALOR = 0;
@@ -588,7 +676,7 @@
                         .where('slug', '==', lojaParam.toLowerCase())
                         .limit(1)
                         .get();
-                    
+
                     if (!slugQuery.empty) {
                         restauranteAtual = slugQuery.docs[0].id; // O ID do documento é o e-mail
                     } else {
@@ -605,7 +693,7 @@
                         if (doc.exists) {
                             const configData = doc.data();
                             window.configLoja = configData;
-                            
+
                             if (configData.logo) {
                                 const logoImg = document.getElementById('logo-restaurante');
                                 if (logoImg) { logoImg.src = configData.logo; logoImg.style.display = 'block'; }
@@ -629,10 +717,24 @@
                             document.getElementById('descricao-loja-header').innerText = configData.descricao_loja || "O melhor sabor no conforto da sua casa";
                             document.title = `${nomeExibicao} - Cardápio Digital`;
 
-                            WHATSAPP_RESTAURANTE = configData.whatsapp || ""; 
+                            WHATSAPP_RESTAURANTE = configData.whatsapp || "";
                             TAXA_ENTREGA = parseFloat(configData.taxa_entrega) || 0;
                             PEDIDO_MINIMO = parseFloat(configData.pedido_minimo) || 0;
                             FRETE_GRATIS_VALOR = parseFloat(configData.frete_gratis_valor) || 0;
+
+                            // Atualiza o endereço da loja
+                            const enderecoLoja = configData.endereco || "";
+                            const divEndereco = document.getElementById('endereco-loja-display');
+                            const txtEndereco = document.getElementById('endereco-loja-texto');
+                            if (divEndereco && txtEndereco) {
+                                if (enderecoLoja) {
+                                    txtEndereco.innerText = enderecoLoja;
+                                    divEndereco.style.display = 'inline-flex';
+                                    if (window.lucide) window.lucide.createIcons();
+                                } else {
+                                    divEndereco.style.display = 'none';
+                                }
+                            }
 
                             console.log("loadStoreSpecificData: Configurações da loja atualizadas. WhatsApp:", WHATSAPP_RESTAURANTE);
                             // Atualiza cupons e status sempre que os dados mudarem no banco
@@ -646,10 +748,10 @@
                             window.atualizarStatusLoja(); // Renderiza com padrões
                         }
                     });
-                
+
                 // PRIORIDADE MÁXIMA: Carrega o cardápio imediatamente após identificar a loja
                 carregarCardapio();
-                
+
                 // Loop de atualização de status (caso o horário mude enquanto o cliente navega)
                 if (!window._statusInterval) {
                     window._statusInterval = setInterval(window.atualizarStatusLoja, 30000);
@@ -658,7 +760,6 @@
                 // Executa funções secundárias em blocos protegidos
                 try {
                     verificarUltimoPedido();
-                    atualizarPontosUI();
                     verificarLinkDireto();
                     verificarCupomURL();
                     gerarLinkExibicao();
@@ -676,6 +777,13 @@
                 }
             }
         }
+
+        window.abrirGoogleMaps = function () {
+            if (window.configLoja && window.configLoja.endereco) {
+                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(window.configLoja.endereco)}`;
+                window.open(url, '_blank');
+            }
+        };
 
         let currentStep = 1;
 
@@ -700,7 +808,7 @@
             currentStep = step;
             document.querySelectorAll('.checkout-step').forEach(s => s.classList.remove('active'));
             document.getElementById(`step-${step}`).classList.add('active');
-            
+
             document.querySelectorAll('.step-dot').forEach(dot => {
                 const dStep = parseInt(dot.dataset.step);
                 dot.classList.toggle('active', dStep === step);
@@ -720,12 +828,12 @@
                 .where('owner', '==', restauranteAtual)
                 .where('categoria', 'in', categories)
                 .get();
-            
+
             const items = [];
             querySnapshot.forEach(doc => {
                 items.push({ ...doc.data(), id: doc.id });
             });
-            
+
             container.innerHTML = items.map(p => {
                 const noCarrinho = carrinho.some(item => item.nome === p.nome);
                 const iconName = (window.iconMap && window.iconMap[p.categoria]) || 'package';
@@ -780,17 +888,17 @@
                     <li>
                         <div style="display:flex; flex-direction:column; text-align:left; gap:2px">
                             <b style="color:var(--text-main)">${item.nome}</b>
-                            ${item.adicionais && item.adicionais.length > 0 ? 
-                                `<small style="color:var(--primary-color)">+ ${item.adicionais.map(a => a.nome).join(', ')}</small>` 
-                                : ''
-                            }
+                            ${item.adicionais && item.adicionais.length > 0 ?
+                        `<small style="color:var(--primary-color)">+ ${item.adicionais.map(a => a.nome).join(', ')}</small>`
+                        : ''
+                    }
                             ${item.isCombo && item.comboItems && item.comboItems.length > 0 ?
-                                `<small style="color:var(--text-muted); margin-top: 3px;">(Contém: ${item.comboItems.map(ci => ci.nome).join(', ')})</small>`
-                                : ''
-                            }
+                        `<small style="color:var(--text-muted); margin-top: 3px;">(Contém: ${item.comboItems.map(ci => ci.nome).join(', ')})</small>`
+                        : ''
+                    }
                             ${item.obs ?
-                                `<small style="color:var(--text-muted); margin-top: 3px;">Obs: ${item.obs}</small>`
-                                : ''}
+                        `<small style="color:var(--text-muted); margin-top: 3px;">Obs: ${item.obs}</small>`
+                        : ''}
                             <small style="color:var(--text-muted)">R$ ${item.preco.toFixed(2)} un.</small>
                         </div>
                         <div class="qty-controls">
@@ -834,7 +942,7 @@
 
         function abrirResumo() {
             if (carrinho.length === 0) return showToast("Sua sacola está vazia!", "error");
-            
+
             // Preenche dados salvos para conveniência
             document.getElementById('nome-cliente').value = localStorage.getItem('cliente_nome') || '';
             document.getElementById('telefone-cliente').value = localStorage.getItem('cliente_telefone') || '';
@@ -843,10 +951,10 @@
             document.getElementById('numero-cliente').value = localStorage.getItem('cliente_numero') || '';
             document.getElementById('rua-cliente').value = localStorage.getItem('cliente_rua') || '';
             document.getElementById('bairro-cliente').value = localStorage.getItem('cliente_bairro') || '';
-            
+
             const tipoPedidoSalvo = localStorage.getItem('cliente_tipo_pedido') || 'Entrega';
             if (window.updateOrderTypeSelection) window.updateOrderTypeSelection(tipoPedidoSalvo);
-            
+
             if (typeof carregarEnderecosSalvos === 'function') carregarEnderecosSalvos();
 
             currentStep = 1;
@@ -888,7 +996,7 @@
         // Carrinho zerado ao recarregar a página
         let carrinho = [];
         localStorage.removeItem('carrinho_atual');
-        
+
         let descontoCupom = 0;
         let cuponsDaLoja = {};
 
@@ -900,7 +1008,7 @@
             if (configLoja.cupons) {
                 configLoja.cupons.split(',').forEach(c => {
                     const [code, val] = c.split(':');
-                    if(code && val) cuponsDaLoja[code.trim().toUpperCase()] = parseFloat(val.trim());
+                    if (code && val) cuponsDaLoja[code.trim().toUpperCase()] = parseFloat(val.trim());
                 });
             }
         }
@@ -913,9 +1021,9 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerText = message;
-            
+
             container.appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.classList.add('fade-out');
                 toast.addEventListener('animationend', () => {
@@ -954,92 +1062,92 @@
             unsubCardapio = db.collection('produtos')
                 .where('owner', '==', restauranteAtual)
                 .onSnapshot(querySnapshot => {
-                const meusProdutos = [];
-                querySnapshot.forEach(doc => meusProdutos.push({ ...doc.data(), id: doc.id }));
+                    const meusProdutos = [];
+                    querySnapshot.forEach(doc => meusProdutos.push({ ...doc.data(), id: doc.id }));
 
-                if (meusProdutos.length === 0) {
-                    container.innerHTML = '<p class="loading">O cardápio está vazio.</p>';
-                    return;
-                }
-
-                // 1. Filtrar e Agrupar produtos
-                const categorias = {};
-                let produtosProcessados = meusProdutos;
-
-                // Aplicar Filtro de Categoria ou Tag
-                if (categoriaFiltro !== 'Todos') {
-                    if (['tagVeggie', 'tagSpicy', 'tagFeatured'].includes(categoriaFiltro)) {
-                        produtosProcessados = produtosProcessados.filter(p => p[categoriaFiltro]);
-                    } else {
-                        produtosProcessados = produtosProcessados.filter(p => p.categoria === categoriaFiltro);
-                    }
-                }
-
-                produtosProcessados.forEach(p => {
-                    if (!categorias[p.categoria]) categorias[p.categoria] = [];
-                    categorias[p.categoria].push(p);
-                });
-
-                // 2. Ordenar categorias
-                const categoriasPadrao = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Acompanhamentos', 'Porções', 'Sobremesas', 'Bebidas'];
-                const customStr = configLoja.categorias_custom || "";
-                const categoriasCustom = customStr.split(',').map(c => c.trim()).filter(c => c !== "");
-                const ordem = [...categoriasPadrao, ...categoriasCustom];
-
-                const catsSorted = Object.keys(categorias).sort((a, b) => {
-                    let idxA = ordem.indexOf(a);
-                    let idxB = ordem.indexOf(b);
-                    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
-                });
-
-                // 3. Limpar containers
-                filtroNav.innerHTML = '';
-                if (!termoBusca) {
-                    const btnTodos = document.createElement('button');
-                    btnTodos.className = `filter-btn ${categoriaFiltro === 'Todos' ? 'active' : ''}`;
-                    btnTodos.innerHTML = `🍽️ Todos`;
-                    btnTodos.onclick = () => filtrar('Todos');
-                    filtroNav.appendChild(btnTodos);
-                }
-
-                container.innerHTML = '';
-
-                // 4. Renderizar Seções
-                catsSorted.forEach((cat) => {
-                    const catId = `cat-${cat.replace(/\s+/g, '-').toLowerCase()}`;
-                    let items = categorias[cat];
-
-                    if (termoBusca && items) {
-                        items = items.filter(p => p.nome.toLowerCase().includes(termoBusca.toLowerCase()));
+                    if (meusProdutos.length === 0) {
+                        container.innerHTML = '<p class="loading">O cardápio está vazio.</p>';
+                        return;
                     }
 
-                    if (items.length > 0) {
-                        const iconName = window.iconMap[cat] || 'package';
-                        const btn = document.createElement('button');
-                        btn.className = `filter-btn ${categoriaFiltro === cat ? 'active' : ''}`;
-                        btn.innerHTML = `<i data-lucide="${iconName}" style="width:16px; height:16px"></i> ${cat}`;
-                        btn.onclick = (e) => scrollToCategory(catId, e.currentTarget);
-                        filtroNav.appendChild(btn);
+                    // 1. Filtrar e Agrupar produtos
+                    const categorias = {};
+                    let produtosProcessados = meusProdutos;
 
-                        const section = document.createElement('section');
-                        section.className = 'category-section';
-                        section.id = catId;
-                        section.innerHTML = `<h2 class="category-title"><i data-lucide="${iconName}"></i> ${cat}</h2>`;
+                    // Aplicar Filtro de Categoria ou Tag
+                    if (categoriaFiltro !== 'Todos') {
+                        if (['tagVeggie', 'tagSpicy', 'tagFeatured'].includes(categoriaFiltro)) {
+                            produtosProcessados = produtosProcessados.filter(p => p[categoriaFiltro]);
+                        } else {
+                            produtosProcessados = produtosProcessados.filter(p => p.categoria === categoriaFiltro);
+                        }
+                    }
 
-                        const grid = document.createElement('div');
-                        grid.className = 'produtos-grid';
+                    produtosProcessados.forEach(p => {
+                        if (!categorias[p.categoria]) categorias[p.categoria] = [];
+                        categorias[p.categoria].push(p);
+                    });
 
-                        items.forEach(prod => {
-                            const prodData = JSON.stringify(prod).split('"').join('&quot;');
-                            const itemNoCarrinho = carrinho.find(c => c.nome === prod.nome);
-                            const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
-                            const prodIcon = window.iconMap[prod.categoria] || 'package';
-            const isCombo = prod.isCombo ? 'combo-card' : '';
-                            const imageHTML = prod.imagem 
-                                ? `<img src="${prod.imagem}" alt="${prod.nome}">`
-                                : `<div class="card-image-placeholder"><i data-lucide="${prodIcon}"></i></div>`;
+                    // 2. Ordenar categorias
+                    const categoriasPadrao = ['Combos', 'Destaques', 'Lanches', 'Pizzas', 'Acompanhamentos', 'Porções', 'Sobremesas', 'Bebidas'];
+                    const customStr = configLoja.categorias_custom || "";
+                    const categoriasCustom = customStr.split(',').map(c => c.trim()).filter(c => c !== "");
+                    const ordem = [...categoriasPadrao, ...categoriasCustom];
 
-                            let acaoBotao = qtd > 0 ? `
+                    const catsSorted = Object.keys(categorias).sort((a, b) => {
+                        let idxA = ordem.indexOf(a);
+                        let idxB = ordem.indexOf(b);
+                        return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+                    });
+
+                    // 3. Limpar containers
+                    filtroNav.innerHTML = '';
+                    if (!termoBusca) {
+                        const btnTodos = document.createElement('button');
+                        btnTodos.className = `filter-btn ${categoriaFiltro === 'Todos' ? 'active' : ''}`;
+                        btnTodos.innerHTML = `🍽️ Todos`;
+                        btnTodos.onclick = () => filtrar('Todos');
+                        filtroNav.appendChild(btnTodos);
+                    }
+
+                    container.innerHTML = '';
+
+                    // 4. Renderizar Seções
+                    catsSorted.forEach((cat) => {
+                        const catId = `cat-${cat.replace(/\s+/g, '-').toLowerCase()}`;
+                        let items = categorias[cat];
+
+                        if (termoBusca && items) {
+                            items = items.filter(p => p.nome.toLowerCase().includes(termoBusca.toLowerCase()));
+                        }
+
+                        if (items.length > 0) {
+                            const iconName = window.iconMap[cat] || 'package';
+                            const btn = document.createElement('button');
+                            btn.className = `filter-btn ${categoriaFiltro === cat ? 'active' : ''}`;
+                            btn.innerHTML = `<i data-lucide="${iconName}" style="width:16px; height:16px"></i> ${cat}`;
+                            btn.onclick = (e) => scrollToCategory(catId, e.currentTarget);
+                            filtroNav.appendChild(btn);
+
+                            const section = document.createElement('section');
+                            section.className = 'category-section';
+                            section.id = catId;
+                            section.innerHTML = `<h2 class="category-title"><i data-lucide="${iconName}"></i> ${cat}</h2>`;
+
+                            const grid = document.createElement('div');
+                            grid.className = 'produtos-grid';
+
+                            items.forEach(prod => {
+                                const prodData = JSON.stringify(prod).split('"').join('&quot;');
+                                const itemNoCarrinho = carrinho.find(c => c.nome === prod.nome);
+                                const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
+                                const prodIcon = window.iconMap[prod.categoria] || 'package';
+                                const isCombo = prod.isCombo ? 'combo-card' : '';
+                                const imageHTML = prod.imagem
+                                    ? `<img src="${prod.imagem}" alt="${prod.nome}">`
+                                    : `<div class="card-image-placeholder"><i data-lucide="${prodIcon}"></i></div>`;
+
+                                let acaoBotao = qtd > 0 ? `
                                 <div class="card-qty-controls">
                                     <button class="btn-card-qty" onclick="alterarQuantidadeCard('${prod.nome}', -1)"><i data-lucide="minus" style="width:14px"></i></button>
                                     <span style="font-weight: 800; min-width: 20px; text-align: center;">${qtd}</span>
@@ -1048,8 +1156,8 @@
                                 <button class="btn-add" style="margin: 0; padding: 8px 16px; border-radius: 12px;" onclick="adicionarAoCarrinho(${prodData})">
                                     <i data-lucide="plus" style="width: 16px; height: 16px; margin-right: 4px;"></i> ${prod.isCombo ? 'Ver Combo' : 'Adicionar'}
                                 </button>`;
-                            
-                            grid.innerHTML += `
+
+                                grid.innerHTML += `
                                 <div class="card reveal">
                                     <div class="card-image-container">
                                         <div class="card-badges">
@@ -1069,16 +1177,16 @@
                                         </div>
                                     </div>
                                 </div>`;
-                        });
-                        section.appendChild(grid);
-                        container.appendChild(section);
-                    }
+                            });
+                            section.appendChild(grid);
+                            container.appendChild(section);
+                        }
+                    });
+                    if (window.lucide) lucide.createIcons();
+                }, error => {
+                    console.error("Erro ao carregar cardápio:", error);
+                    container.innerHTML = '<p class="loading">Erro ao conectar com o banco de dados.</p>';
                 });
-                if (window.lucide) lucide.createIcons();
-            }, error => {
-                console.error("Erro ao carregar cardápio:", error);
-                container.innerHTML = '<p class="loading">Erro ao conectar com o banco de dados.</p>';
-            });
         }
 
         function adicionarAoCarrinho(prod) {
@@ -1089,10 +1197,10 @@
                 if (itemExistente) {
                     itemExistente.quantidade = (itemExistente.quantidade || 1) + 1;
                 } else {
-                    carrinho.push({ 
-                        nome: prod.nome, 
-                        preco: parseFloat(prod.preco), 
-                        quantidade: 1, 
+                    carrinho.push({
+                        nome: prod.nome,
+                        preco: parseFloat(prod.preco),
+                        quantidade: 1,
                         adicionais: [],
                         obs: "",
                         isCombo: true,
@@ -1104,19 +1212,19 @@
                 if (itemExistente) {
                     itemExistente.quantidade = (itemExistente.quantidade || 1) + 1;
                 } else {
-                    carrinho.push({ 
-                        nome: prod.nome, 
-                        preco: parseFloat(prod.preco), 
-                        quantidade: 1, 
+                    carrinho.push({
+                        nome: prod.nome,
+                        preco: parseFloat(prod.preco),
+                        quantidade: 1,
                         adicionais: [],
-                        obs: "" 
+                        obs: ""
                     });
                 }
             }
 
             salvarCarrinho();
             atualizarTotalBarra();
-            
+
             // Atualiza os cards para mostrar o contador
             const btnAtivo = document.querySelector('.filter-btn.active');
             const termo = document.getElementById('inputBusca').value;
@@ -1125,7 +1233,7 @@
             // Efeito de pulso no carrinho
             const footer = document.querySelector('.cart-footer');
             footer.classList.remove('cart-pulse');
-            void footer.offsetWidth; 
+            void footer.offsetWidth;
             footer.classList.add('cart-pulse');
         }
 
@@ -1138,7 +1246,7 @@
                 }
                 salvarCarrinho();
                 atualizarTotalBarra();
-                
+
                 // Recarrega o cardápio para atualizar os números nos cards
                 const btnAtivo = document.querySelector('.filter-btn.active');
                 const termo = document.getElementById('inputBusca').value;
@@ -1164,13 +1272,13 @@
             document.getElementById('custom-obs').value = "";
             document.getElementById('detalhe-combo-items').innerHTML = ''; // Clear combo items
             document.getElementById('total-detalhe').innerText = parseFloat(prod.preco).toFixed(2);
-            
+
             // Sugestão de Upsell (Bebidas ou Sobremesas)
             const upsellList = document.getElementById('lista-extras-sugeridos');
             const produtos = JSON.parse(localStorage.getItem('meus_produtos')) || [];
             const sugeridos = produtos.filter(p => p.owner === restauranteAtual && (p.categoria === 'Bebidas' || p.categoria === 'Sobremesas')).slice(0, 3);
-            
-            if(sugeridos.length > 0 && prod.categoria !== 'Bebidas') {
+
+            if (sugeridos.length > 0 && prod.categoria !== 'Bebidas') {
                 document.getElementById('secao-upsell').style.display = 'block';
                 upsellList.innerHTML = sugeridos.map(s => `
                     <div class="upsell-item" onclick='adicionarUpsellRapido(${JSON.stringify(s).replace(/'/g, "&apos;")})'>
@@ -1198,7 +1306,7 @@
             const containerExtras = document.getElementById('lista-extras-disponiveis');
             const grupoExtras = document.getElementById('grupo-extras');
             containerExtras.innerHTML = '';
-            
+
             if (prod.adicionais && prod.adicionais.trim() !== "") {
                 grupoExtras.style.display = 'block';
                 prod.adicionais.split(',').forEach(ad => {
@@ -1221,7 +1329,7 @@
             document.getElementById('btn-confirmar-adicao').onclick = confirmarAdicao;
         }
 
-        window.adicionarUpsellRapido = function(prod) {
+        window.adicionarUpsellRapido = function (prod) {
             carrinho.push({ nome: prod.nome, preco: parseFloat(prod.preco), quantidade: 1 });
             salvarCarrinho();
             atualizarTotalBarra();
@@ -1243,20 +1351,20 @@
             });
 
             const obs = document.getElementById('custom-obs').value;
-            carrinho.push({ 
-                nome: produtoSelecionadoTemp.nome, 
-                preco: precoFinal, 
-                quantidade: 1, 
+            carrinho.push({
+                nome: produtoSelecionadoTemp.nome,
+                preco: precoFinal,
+                quantidade: 1,
                 adicionais: extras,
-                    obs: obs,
-                    isCombo: produtoSelecionadoTemp.isCombo || false,
+                obs: obs,
+                isCombo: produtoSelecionadoTemp.isCombo || false,
             });
 
             salvarCarrinho();
             atualizarTotalBarra();
             showToast(`${produtoSelecionadoTemp.nome} adicionado!`);
             document.getElementById('modal-detalhes-produto').style.display = 'none';
-            
+
             // Efeito de pulso no carrinho
             const footer = document.querySelector('.cart-footer');
             footer.classList.remove('cart-pulse');
@@ -1274,7 +1382,7 @@
                     title: nome,
                     text: `Confira este item no cardápio de hoje: ${nome}`,
                     url: link
-                }).catch(() => {});
+                }).catch(() => { });
             } else {
                 navigator.clipboard.writeText(link);
                 showToast("Link do produto copiado!");
@@ -1290,10 +1398,10 @@
         function socialProofLoop() {
             const nomes = ["Ana", "Carlos", "Beatriz", "Marcos", "Julia", "Ricardo"];
             const acoes = ["acabou de pedir um Lanche", "ganhou frete grátis!", "pediu uma Pizza agora"];
-            
+
             setInterval(() => {
-                if(Math.random() > 0.7) {
-                    const msg = `${nomes[Math.floor(Math.random()*nomes.length)]} ${acoes[Math.floor(Math.random()*acoes.length)]}`;
+                if (Math.random() > 0.7) {
+                    const msg = `${nomes[Math.floor(Math.random() * nomes.length)]} ${acoes[Math.floor(Math.random() * acoes.length)]}`;
                     const div = document.createElement('div');
                     div.className = 'social-proof';
                     div.innerHTML = `<span>🛒</span> ${msg}`;
@@ -1308,15 +1416,15 @@
             const tipoPedido = toggleHidden ? toggleHidden.value : 'Entrega';
             const freteGratisMinimo = FRETE_GRATIS_VALOR;
             const subtotal = carrinho.reduce((sum, item) => sum + (item.preco * (item.quantidade || 1)), 0);
-            
+
             // Atualiza o contador de itens na sacola
             const totalItens = carrinho.reduce((sum, item) => sum + (item.quantidade || 1), 0);
             const cartCountEl = document.getElementById('cart-count');
             cartCountEl.innerText = totalItens;
             cartCountEl.style.display = totalItens > 0 ? 'flex' : 'none';
-            
+
             let taxa = (tipoPedido === 'Entrega' && subtotal > 0) ? TAXA_ENTREGA : 0;
-            
+
             // Lógica da Barra de Frete Grátis
             const infoFrete = document.getElementById('frete-info');
             const progCont = document.getElementById('frete-progress-cont');
@@ -1335,9 +1443,9 @@
                 infoFrete.innerText = subtotal > 0 ? "Seu Pedido" : "Carrinho Vazio";
                 progCont.style.display = 'none';
             }
-            
+
             if (freteGratisMinimo > 0 && subtotal >= freteGratisMinimo) taxa = 0;
-            
+
             let totalFinal = subtotal > 0 ? subtotal + taxa - descontoCupom : 0;
             if (totalFinal < 0) totalFinal = 0;
 
@@ -1368,7 +1476,7 @@
         }
 
         // Removido fecharModal e closeModal daqui, pois agora usamos as funções globais do script.js
-        
+
         async function finalizarPedido() {
             console.log("finalizarPedido: Função iniciada.");
             const nome = document.getElementById('nome-cliente').value;
@@ -1444,7 +1552,7 @@
             const subtotal = carrinho.reduce((sum, item) => sum + (item.preco * (item.quantidade || 1)), 0);
             const freteGratisMinimo = FRETE_GRATIS_VALOR;
             let taxaAplicada = (tipoPedido === 'Entrega') ? TAXA_ENTREGA : 0;
-            
+
             if (freteGratisMinimo > 0 && subtotal >= freteGratisMinimo) taxaAplicada = 0;
 
             let totalFinal = subtotal + taxaAplicada - descontoCupom;
@@ -1470,22 +1578,22 @@
 
             // Construir a mensagem (usando %0A para quebras de linha e * para negrito no WhatsApp)
             const mensagem = `*Novo Pedido - Meu Restaurante*%0A%0A` +
-                             `*Cliente:* ${nome}%0A` +
-                             `*Telefone:* ${telefone}%0A` +
-                             `*Tipo:* ${tipoPedido}%0A` +
-                             (tipoPedido === 'Entrega' ? 
-                                `*Endereço:* ${rua}, ${numero} - ${bairro} - CEP: ${cep}%0A` +
-                                (endereco ? `*Complemento:* ${endereco}%0A` : '') // 'endereco' agora é complemento
-                                : ''
-                             ) +
-                             (observacoes ? `*Observações:* ${observacoes}%0A` : '') +
-                             `${tempoEstimadoMsg}%0A` +
-                             `${infoPagamento}%0A%0A` +
-                             `*Itens:*%0A${itensTexto}%0A%0A` +
-                             `*Subtotal:* R$ ${subtotal.toFixed(2)}%0A` +
-                             (tipoPedido === 'Entrega' ? `*Taxa de Entrega:* R$ ${TAXA_ENTREGA.toFixed(2)}%0A` : '') +
-                             (descontoCupom > 0 ? `*Desconto:* - R$ ${descontoCupom.toFixed(2)}%0A` : '') +
-                             `*Total Final: R$ ${totalFinal.toFixed(2)}*`;
+                `*Cliente:* ${nome}%0A` +
+                `*Telefone:* ${telefone}%0A` +
+                `*Tipo:* ${tipoPedido}%0A` +
+                (tipoPedido === 'Entrega' ?
+                    `*Endereço:* ${rua}, ${numero} - ${bairro} - CEP: ${cep}%0A` +
+                    (endereco ? `*Complemento:* ${endereco}%0A` : '') // 'endereco' agora é complemento
+                    : ''
+                ) +
+                (observacoes ? `*Observações:* ${observacoes}%0A` : '') +
+                `${tempoEstimadoMsg}%0A` +
+                `${infoPagamento}%0A%0A` +
+                `*Itens:*%0A${itensTexto}%0A%0A` +
+                `*Subtotal:* R$ ${subtotal.toFixed(2)}%0A` +
+                (tipoPedido === 'Entrega' ? `*Taxa de Entrega:* R$ ${TAXA_ENTREGA.toFixed(2)}%0A` : '') +
+                (descontoCupom > 0 ? `*Desconto:* - R$ ${descontoCupom.toFixed(2)}%0A` : '') +
+                `*Total Final: R$ ${totalFinal.toFixed(2)}*`;
 
             // Validação final para o WhatsApp
             if (!WHATSAPP_RESTAURANTE) {
@@ -1503,10 +1611,10 @@
             const batch = db.batch();
             for (const itemCart of carrinho) {
                 const productQuery = await db.collection('produtos')
-                                             .where('owner', '==', restauranteAtual)
-                                             .where('nome', '==', itemCart.nome)
-                                             .limit(1)
-                                             .get();
+                    .where('owner', '==', restauranteAtual)
+                    .where('nome', '==', itemCart.nome)
+                    .limit(1)
+                    .get();
                 if (!productQuery.empty) {
                     const productDoc = productQuery.docs[0];
                     const currentStock = parseInt(productDoc.data().estoque || '0');
@@ -1518,7 +1626,7 @@
 
             // Salvar no histórico de vendas (Relatório Admin)
             const userLogadoAuth = JSON.parse(localStorage.getItem('usuario_logado'));
-            
+
             try {
                 await db.collection('pedidos').add({
                     data: new Date(), // Salvamos como objeto Date para facilitar filtros por data
@@ -1535,11 +1643,6 @@
             } catch (error) {
                 console.error("Erro ao salvar pedido no Firestore:", error);
             }
-            
-            // Sistema de Fidelidade por Loja
-            let pontosAtuais = parseFloat(localStorage.getItem(`pontos_${restauranteAtual}`)) || 0;
-            localStorage.setItem(`pontos_${restauranteAtual}`, pontosAtuais + totalFinal);
-            atualizarPontosUI();
 
             // Salvar no histórico para permitir repetir o pedido
             console.log("finalizarPedido: Salvando último pedido no localStorage.");
@@ -1564,7 +1667,7 @@
             atualizarTotalBarra();
             verificarUltimoPedido();
             console.log("finalizarPedido: Carrinho e campos limpos, modais fechados.");
-            
+
             // Mostrar Modal Sucesso ou PIX
             const chavePix = configLoja.pix;
             if (pagamento === 'Pix' && chavePix) {
@@ -1597,7 +1700,7 @@
             }, 1000);
         }
 
-        window.compartilharLoja = function() {
+        window.compartilharLoja = function () {
             const identificadorUrl = configLoja.slug || restauranteAtual;
             const link = `${window.location.origin}${window.location.pathname}?loja=${identificadorUrl}`;
             const msg = `Ei! Olha esse cardápio da *${(configLoja.nome_exibicao || restauranteAtual).toUpperCase()}*. Muita coisa gostosa, dá uma olhadinha: ${link}`;
@@ -1611,21 +1714,12 @@
             });
         }
 
-        function atualizarPontosUI() {
-            const pontos = parseFloat(localStorage.getItem(`pontos_${restauranteAtual}`)) || 0;
-            const div = document.getElementById('pontos-fidelidade');
-            if (pontos > 0) {
-                div.innerText = `⭐ ${Math.floor(pontos)} Pontos Fidelidade`;
-                div.style.display = 'inline-flex';
-            } else {
-                div.style.display = 'none';
-            }
-        }
+
 
         function iniciarSplashScreen() {
             const splash = document.getElementById('splash-screen');
             const phraseEl = document.getElementById('splash-phrase');
-            
+
             const frases = [
                 "Preparando os melhores ingredientes...",
                 "Aquecendo o forno para você...",
@@ -1664,7 +1758,7 @@
             }
         }
 
-        window.toggleEnderecoField = function() {
+        window.toggleEnderecoField = function () {
             const tipoPedido = document.getElementById('tipo-pedido-toggle-hidden').value;
             const divEndereco = document.getElementById('div-endereco');
             const deliveryRow = document.getElementById('summary-delivery-row');
@@ -1676,9 +1770,9 @@
                 divEndereco.classList.add('hidden');
                 if (deliveryRow) deliveryRow.style.display = 'none';
             }
-            atualizarTotalBarra(); 
+            atualizarTotalBarra();
             // Apenas atualizamos os valores se o modal já estiver aberto
-            if(document.getElementById('modal-carrinho').style.display === 'flex') {
+            if (document.getElementById('modal-carrinho').style.display === 'flex') {
                 const subtotal = carrinho.reduce((sum, item) => sum + (item.preco * item.quantidade), 0);
                 const taxaAtual = (tipoPedido === 'Entrega') ? TAXA_ENTREGA : 0;
                 if (document.getElementById('summary-total')) document.getElementById('summary-total').innerText = `R$ ${(subtotal + taxaAtual - descontoCupom).toFixed(2)}`;
@@ -1686,7 +1780,7 @@
         }
 
         // Fechar qualquer modal ao clicar no fundo (área externa)
-        window.addEventListener('click', function(event) {
+        window.addEventListener('click', function (event) {
             if (event.target.classList.contains('modal')) {
                 closeModal(event.target.id);
             }
@@ -1700,19 +1794,19 @@
             pedidoToggle.addEventListener('change', toggleEnderecoField);
         }
 
-function filtrar(cat, event) {
+        function filtrar(cat, event) {
             let termo = document.getElementById('inputBusca').value;
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            
+
             if (event && event.currentTarget) {
                 event.currentTarget.classList.add('active');
                 event.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             }
-            
+
             carregarCardapio(cat, termo);
         }
 
-function carregarBanners() {
+        function carregarBanners() {
             const listaBanners = configLoja.banners || [];
             const container = document.getElementById('banner-carousel');
             if (listaBanners.length === 0) {
@@ -1726,7 +1820,7 @@ function carregarBanners() {
             container.style.display = 'flex';
         }
 
-function verificarLinkDireto() {
+        function verificarLinkDireto() {
             const params = new URLSearchParams(window.location.search);
             const produtoDesejado = params.get('produto');
             if (produtoDesejado) {
@@ -1743,7 +1837,7 @@ function verificarLinkDireto() {
         // --- Lógica Profissional de Endereço ---
         function updatePaymentSelection(type) {
             document.getElementById('forma-pagamento').value = type;
-            
+
             document.querySelectorAll('.payment-option').forEach(opt => {
                 opt.classList.remove('active');
             });
@@ -1850,7 +1944,7 @@ function verificarLinkDireto() {
             document.getElementById('numero-cliente').value = endereco.numero || '';
             document.getElementById('bairro-cliente').value = endereco.bairro || '';
             document.getElementById('endereco-entrega').value = endereco.complemento || '';
-            
+
             // Opcional: dar um feedback visual
             showToast("Endereço selecionado!", "success");
             document.querySelectorAll('.address-option').forEach(opt => opt.classList.remove('active'));
@@ -1858,4 +1952,5 @@ function verificarLinkDireto() {
         }
     </script>
 </body>
+
 </html>

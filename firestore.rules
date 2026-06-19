@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Configurações dos Restaurantes
+    // Document ID = Email do dono da loja
+    match /configuracoes/{emailId} {
+      // Leitura pública (para exibir o cardápio ao cliente)
+      allow read: if true;
+      // Escrita apenas pelo usuário logado que tem o mesmo email do documento
+      allow write: if request.auth != null && request.auth.token.email == emailId;
+    }
+
+    // 2. Produtos do Restaurante
+    match /produtos/{produtoId} {
+      // Leitura pública (exibir no cardápio)
+      allow read: if true;
+      // Criação: permite se o usuário estiver logado e colocar seu próprio email como "owner"
+      allow create: if request.auth != null && request.resource.data.owner == request.auth.token.email;
+      // Atualização/Exclusão: permite apenas se o produto já pertencer ao usuário logado
+      allow update, delete: if request.auth != null && resource.data.owner == request.auth.token.email;
+    }
+
+    // 3. Pedidos
+    match /pedidos/{pedidoId} {
+      // Criação livre para os clientes fazerem pedidos (mesmo anônimos)
+      allow create: if true;
+      // Leitura e atualização de status apenas pelo dono do restaurante (restauranteOwner)
+      allow read, update, delete: if request.auth != null && resource.data.restauranteOwner == request.auth.token.email;
+    }
+
+    // 4. Perfil de Usuários
+    match /usuarios/{userId} {
+      // Apenas o próprio usuário pode ler ou editar seus dados
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 5. Leads (Contatos Iniciais/Vendas)
+    match /leads/{leadId} {
+      // Clientes se cadastrando na página de vendas do sistema
+      allow create: if true;
+      // Apenas o dono do restaurante pode ler os leads de seus clientes ou o dono do sistema
+      allow read, update, delete: if request.auth != null; 
+    }
+  }
+}

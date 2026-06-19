@@ -61,6 +61,10 @@
                     <i data-lucide="timer" style="width:16px"></i>
                     <span id="admin-tempo-display">30-50 min</span>
                 </div>
+                <div class="editable-container" onclick="ativarEdicaoInline('endereco')">
+                    <i data-lucide="map-pin" style="width:16px"></i>
+                    <span id="admin-endereco-display">Definir Endereço</span>
+                </div>
             </div>
         </div>
     </header>
@@ -78,7 +82,7 @@
         <section id="section-dashboard">
             <div class="last-order-banner" style="background: #e0f2fe; border-color: #bae6fd; margin-bottom: 20px;">
                 <h4 style="text-align: left; margin-bottom: 5px;">Link da sua Loja:</h4>
-                <code id="link-loja-exibicao" style="background: white; padding: 5px 10px; border-radius: 5px; display: block; margin-bottom: 10px;"></code>
+                <code id="link-loja-exibicao" style="background: white; padding: 5px 10px; border-radius: 5px; display: block; margin-bottom: 10px; word-break: break-all; white-space: pre-wrap; overflow-wrap: anywhere;"></code>
                 <button onclick="copiarLinkLoja()" class="btn-edit" style="margin-top:0; padding: 5px 15px; background: #0ea5e9;">Copiar Link</button>
             </div>
 
@@ -163,6 +167,10 @@
                     <div class="form-group">
                         <label>WhatsApp para receber pedidos</label>
                         <input type="text" id="inputWhatsapp" placeholder="5516999999999">
+                    </div>
+                    <div class="form-group">
+                        <label>Endereço do Restaurante (Rua, Número, Bairro, Cidade)</label>
+                        <input type="text" id="inputEndereco" placeholder="Ex: Av. Paulista, 1000 - São Paulo, SP">
                     </div>
                 </div>
 
@@ -326,6 +334,10 @@
                                 <span>às</span>
                                 <input type="number" id="auth-close" placeholder="23" min="0" max="23" style="flex:1">
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Endereço do Restaurante (Rua, Número, Bairro, Cidade)</label>
+                            <input type="text" id="auth-endereco" placeholder="Ex: Av. Paulista, 1000 - São Paulo, SP">
                         </div>
                         <div class="form-group">
                             <label>Foto ou Logo da Loja</label>

@@ -395,6 +395,7 @@ h1, h2, h3, h4 { /* Adicionado h4 para consistência */
     border-radius: 6px;
     padding: 2px 6px;
     outline: none;
+    max-width: 100%;
 }
 
 .btn-secondary i {
@@ -1437,18 +1438,6 @@ hr { border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0; }
     gap: 16px;
 }
 
-.loyalty-badge {
-    background: #eff6ff;
-    color: #1e40af;
-    padding: 4px 12px;
-    border-radius: 100px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-bottom: 10px;
-}
 
 .btn-print {
     background: #64748b;
@@ -1906,7 +1895,7 @@ input:checked + .slider:before { transform: translateX(24px); }
 }
 .kanban-card-actions .btn-status-print:hover { background: #475569; }
 
-/* Responsividade para Kanban */
+/* Responsividade para Kanban e Navegação Admin */
 @media (max-width: 768px) {
     .kanban-board {
         flex-wrap: nowrap; /* Garante que as colunas não quebrem */
@@ -1916,6 +1905,23 @@ input:checked + .slider:before { transform: translateX(24px); }
     .kanban-column {
         flex: 0 0 250px; /* Largura um pouco menor em telas pequenas */
         padding: 10px;
+    }
+    .admin-nav-wrapper {
+        padding: 0 10px;
+    }
+    .admin-nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+        gap: 12px;
+    }
+    .admin-nav::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+    .nav-item {
+        padding: 12px 6px;
+        font-size: 0.85rem;
+        flex-shrink: 0;
     }
 }
 
@@ -2109,6 +2115,26 @@ input:checked + .slider:before { transform: translateX(24px); }
         justify-content: flex-end;
         margin-top: 5px;
     }
+
+    /* Ajustes específicos do painel admin no celular */
+    .container {
+        padding: 12px;
+    }
+
+    .config-card {
+        padding: 15px;
+    }
+
+    .header-meta-info {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .produtos-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
 }
 
 /* --- Landing Page Styles --- */
@@ -2166,3 +2192,95 @@ input:checked + .slider:before { transform: translateX(24px); }
     font-size: 2.5rem;
     margin-bottom: 15px;
 }
+
+/* Badge de Endereço do Restaurante */
+.store-address-badge {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 6px 14px;
+    border-radius: 100px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    margin-top: 4px;
+}
+
+.store-address-badge:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(232, 34, 46, 0.2);
+}
+
+/* --- Rodapé Legal --- */
+.legal-footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 10px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.legal-footer p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.legal-footer-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+}
+
+.legal-footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.legal-footer-links a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.legal-footer-links span {
+    color: #d1d5db;
+}
+
+/* --- Checkbox de Aceite dos Termos --- */
+.terms-check-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.terms-check-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    margin-top: 2px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.terms-check-label a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.terms-check-label a:hover {
+    text-decoration: underline;
+}
